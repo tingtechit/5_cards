@@ -427,3 +427,8 @@ input {
     max-width: 180px;
   }
 }
+
+
+.setup-separator { border: 0; border-top: 1px solid rgba(255,255,255,0.15); margin: 18px 0; }
+.online-grid { align-items: end; }
+#onlineStatus { margin-top: 8px; min-height: 20px; color: #9fe4c8; }
