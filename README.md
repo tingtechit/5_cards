@@ -17,6 +17,14 @@ These are now filled in `firebase-config.js`.
 
 ## What changed
 
+
+## Gameplay limits updated
+
+- Human players: up to 20
+- Bot players: up to 20
+- Total players in a match: up to 20
+- Deck copies auto-scale based on player count so dealing/draw pile has enough cards for larger lobbies.
+
 - Firebase modular initialization now exists in `firebase-init.js`.
 - `app.js` continues using a familiar Realtime DB API (`ref().set/get/update/on/off/child`) through a compatibility wrapper.
 - Firebase Hosting config added:

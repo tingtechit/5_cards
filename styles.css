@@ -432,3 +432,22 @@ input {
 .setup-separator { border: 0; border-top: 1px solid rgba(255,255,255,0.15); margin: 18px 0; }
 .online-grid { align-items: end; }
 #onlineStatus { margin-top: 8px; min-height: 20px; color: #9fe4c8; }
+
+.instructions-box {
+  margin-top: 14px;
+  border: 1px solid rgba(157, 223, 203, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(8, 33, 41, 0.55);
+}
+.instructions-box summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #c9f7e5;
+}
+.instructions-box ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #d5f2e7;
+}
+.instructions-box li { margin: 6px 0; }

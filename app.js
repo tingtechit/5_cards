@@ -188,7 +188,8 @@ function shuffle(list) {
 }
 
 function decksNeeded(playerCount) {
-  return Math.max(1, Math.ceil((playerCount * 5 + 20) / 54));
+  const cardsNeeded = playerCount * 5 + Math.max(20, playerCount * 2);
+  return Math.max(1, Math.ceil(cardsNeeded / 54));
 }
 
 function makeDeck(playerCount) {
@@ -268,9 +269,9 @@ function startGame() {
   const botCount = Number(ui.botCount.value);
   const rounds = Number(ui.roundCount.value);
 
-  if (!Number.isInteger(humanCount) || humanCount < 1 || humanCount > 4) return (ui.setupError.textContent = "Human players must be 1..4");
-  if (!Number.isInteger(botCount) || botCount < 0 || botCount > 7) return (ui.setupError.textContent = "Bot players must be 0..7");
-  if (humanCount + botCount < 2 || humanCount + botCount > 8) return (ui.setupError.textContent = "Total players must be 2..8");
+  if (!Number.isInteger(humanCount) || humanCount < 1 || humanCount > 20) return (ui.setupError.textContent = "Human players must be 1..20");
+  if (!Number.isInteger(botCount) || botCount < 0 || botCount > 20) return (ui.setupError.textContent = "Bot players must be 0..20");
+  if (humanCount + botCount < 2 || humanCount + botCount > 20) return (ui.setupError.textContent = "Total players must be 2..20");
   if (!Number.isInteger(rounds) || rounds < 1 || rounds > 20) return (ui.setupError.textContent = "Rounds must be 1..20");
 
   const names = normalizeNames(humanCount, ui.playerNames.value);
