@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5 Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-1"></div>
+  <div class="ambient ambient-2"></div>
+
+  <main class="app-shell">
+    <section id="setupPanel" class="panel panel-setup">
+      <h1>5 Cards</h1>
+      <p class="sub">Discard first, then draw. Keep your total lowest and call <strong>Show</strong> at the right time.</p>
+
+      <div class="form-grid">
+        <label>
+          Human Players (1-4)
+          <input id="playerCount" type="number" min="1" max="4" value="1" />
+        </label>
+        <label>
+          Bot Players (0-7)
+          <input id="botCount" type="number" min="0" max="7" value="2" />
+        </label>
+        <label>
+          Rounds (1-20)
+          <input id="roundCount" type="number" min="1" max="20" value="5" />
+        </label>
+      </div>
+
+      <label class="name-block">
+        Human names (comma-separated)
+        <input id="playerNames" type="text" placeholder="You" />
+      </label>
+
+      <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
+      <p id="setupError" class="error"></p>
+    </section>
+
+    <section id="gamePanel" class="panel panel-game hidden">
+      <header class="topbar">
+        <div>
+          <p class="tiny">Round</p>
+          <h2 id="roundLabel">1 / 1</h2>
+        </div>
+        <div>
+          <p class="tiny">Current Turn</p>
+          <h2 id="turnLabel">Player</h2>
+        </div>
+        <div>
+          <p class="tiny">Phase</p>
+          <h2 id="phaseLabel">Discard</h2>
+        </div>
+      </header>
+
+      <section class="table-zone">
+        <article class="stack-card draw-stack">
+          <h3>Draw Pile</h3>
+          <div class="card-back"></div>
+          <p><span id="drawCount">0</span> cards</p>
+          <button id="drawPileBtn" class="btn">Draw from Pile</button>
+        </article>
+
+        <article class="stack-card discard-stack">
+          <h3>Previous Player Discard</h3>
+          <div id="previousDiscardVisual" class="discard-visual">Empty</div>
+          <p id="previousDiscardMeta">No previous discard</p>
+          <button id="takeDiscardBtn" class="btn">Pick 1 Card</button>
+        </article>
+
+        <article class="stack-card discard-stack">
+          <h3>Current Top Discard</h3>
+          <div id="currentDiscardVisual" class="discard-visual">Empty</div>
+          <p id="currentDiscardMeta">No current discard</p>
+        </article>
+      </section>
+
+      <section class="controls">
+        <button id="showBtn" class="btn btn-accent">Show</button>
+        <button id="discardBtn" class="btn btn-danger" disabled>Discard Selected</button>
+      </section>
+
+      <section class="player-strip" id="playerStrip"></section>
+
+      <section class="hand-panel">
+        <div class="hand-header">
+          <h3 id="handTitle">Hand</h3>
+          <p id="handPoints">Points: 0</p>
+        </div>
+        <p class="tiny drag-tip">Tip: drag cards to reorder your hand.</p>
+        <div id="handCards" class="hand-cards"></div>
+      </section>
+
+      <section class="score-panel">
+        <h3>Scoreboard (lower is better)</h3>
+        <div id="scoreboard" class="scoreboard"></div>
+      </section>
+
+      <section class="log-panel">
+        <h3>Game Log</h3>
+        <div id="logBox" class="log-box"></div>
+      </section>
+
+    </section>
+  </main>
+
+  <div id="resultPanel" class="modal hidden">
+    <div class="modal-card result-panel">
+      <h3 id="modalTitle">Round Result</h3>
+      <div id="revealBox" class="reveal-box"></div>
+      <div id="resultFx" class="result-fx"></div>
+      <button id="nextRoundBtn" class="btn btn-primary">Next Round</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
