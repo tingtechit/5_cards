@@ -136,8 +136,8 @@ function maybePlaySyncedShow() {
   const payload = state.lastShowPayload;
   if (!payload || !payload.eventId || payload.eventId === lastSeenShowEventId) return;
   lastSeenShowEventId = payload.eventId;
-  const additions = new Map(payload.additions || []);
-  openRevealModal(payload.showerIndex, payload.strictLowest, payload.reveal || [], additions);
+  const additionsByIndex = normalizeList(payload.additionsByIndex);
+  openRevealModal(payload.showerIndex, payload.strictLowest, payload.reveal || [], additionsByIndex);
 }
 
 function myPlayerIndex() {
@@ -656,7 +656,7 @@ function resolveShow(showerIndex) {
   const showerPts = handPoints(shower.hand);
   const strictLowest = state.players.every((p, i) => i === showerIndex || showerPts < handPoints(p.hand));
 
-  const additions = new Map();
+  const additionsByIndex = [];
   const cardTie = (a, b) => {
     const pa = cardPoints(a);
     const pb = cardPoints(b);
@@ -671,7 +671,7 @@ function resolveShow(showerIndex) {
     else if (i === showerIndex) add = 50;
     else add = pts <= showerPts ? 0 : pts;
     p.totalScore += add;
-    additions.set(p.name, add);
+    additionsByIndex[i] = add;
     return {
       index: i,
       name: p.name,
@@ -688,19 +688,18 @@ function resolveShow(showerIndex) {
     showerIndex,
     strictLowest,
     reveal,
-    additions: [...additions.entries()],
+    additionsByIndex,
   };
   lastSeenShowEventId = eventId;
   playSfx("show");
-  openRevealModal(showerIndex, strictLowest, reveal, additions);
+  openRevealModal(showerIndex, strictLowest, reveal, additionsByIndex);
 }
 
-async function openRevealModal(showerIndex, strictLowest, reveal, additions) {
+async function openRevealModal(showerIndex, strictLowest, reveal, additionsByIndex) {
   if (state.revealRunning) return;
   state.revealRunning = true;
 
   const shower = state.players[showerIndex];
-  const isViewerShow = showerIndex === state.viewerIndex;
   const sorted = [...reveal].sort((a, b) => a.points - b.points);
 
   ui.modalTitle.textContent = `${shower.name} called SHOW`;
@@ -750,22 +749,22 @@ async function openRevealModal(showerIndex, strictLowest, reveal, additions) {
       await sleep(420);
     }
     col.querySelector(".reveal-points strong").textContent = String(r.points);
-    col.querySelector(".reveal-add strong").textContent = `+${additions.get(r.name)}`;
+    const addValue = additionsByIndex[r.index] ?? 0;
+    col.querySelector(".reveal-add strong").textContent = `+${addValue}`;
     col.querySelector(".reveal-total strong").textContent = String(r.total);
   };
 
-  if (isViewerShow) {
-    for (const r of sorted) await revealOne(r, 850);
-    const win = strictLowest;
-    if (win) {
-      ui.resultPanel.classList.add("result-win");
-      ui.resultFx.innerHTML = '<div class="fx-win"><img alt=\"Fireworks\" src=\"https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif\" /></div><p class=\"win-text\">You WON this round!</p>';
-    } else {
-      ui.resultPanel.classList.add("result-lose");
-      ui.resultFx.innerHTML = '<div class="fx-lose"><img alt=\"Sad\" src=\"https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif\" /></div><p class=\"lose-text\">You LOST this round.</p>';
-    }
+  for (const r of sorted) await revealOne(r, 220);
+
+  const viewerAdd = additionsByIndex[state.viewerIndex] ?? 0;
+  if (viewerAdd === 0) {
+    ui.resultPanel.classList.add("result-win");
+    ui.resultFx.innerHTML = '<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">You WON this round! (+0)</p>';
+  } else if (viewerAdd === 50) {
+    ui.resultPanel.classList.add("result-lose");
+    ui.resultFx.innerHTML = '<div class="fx-lose"><img alt="Sad" src="https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif" /></div><p class="lose-text">You LOST this round. (+50)</p>';
   } else {
-    for (const r of sorted) await revealOne(r, 100);
+    ui.resultFx.innerHTML = `<p class="reveal-title">Round Add: +${viewerAdd}</p>`;
   }
 
   ui.nextRoundBtn.textContent = state.roundNumber >= state.roundsTarget ? "Finish Game" : "Next Round";
