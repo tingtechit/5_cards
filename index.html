@@ -39,6 +39,20 @@
       </label>
 
       <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
+      <hr class="setup-separator" />
+      <h3>Online Multiplayer (Firebase)</h3>
+      <p class="tiny">Create a room, share room code, and play in real-time.</p>
+      <label class="name-block">
+        Your display name
+        <input id="onlineName" type="text" placeholder="Your name" />
+      </label>
+      <div class="form-grid online-grid">
+        <button id="createRoomBtn" class="btn">Create Room</button>
+        <input id="roomCodeInput" type="text" placeholder="ROOM123" />
+        <button id="joinRoomBtn" class="btn">Join Room</button>
+      </div>
+      <p id="onlineStatus" class="tiny"></p>
+      <button id="startOnlineBtn" class="btn btn-accent" disabled>Start Online Match</button>
       <p id="setupError" class="error"></p>
     </section>
 
@@ -118,6 +132,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="firebase-init.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
