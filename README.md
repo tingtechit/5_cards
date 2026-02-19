@@ -1,34 +1,118 @@
 # 5 Cards
 
-Local card game (no online mode). Bots are optional.
+Realtime multiplayer card game using Firebase Realtime Database.
 
-## Run
+## Firebase details extracted from your message
 
-Open:
+- `apiKey`: `AIzaSyCmRSLgpM93wi-kp-NZnaryDzmWjfU3XeE`
+- `authDomain`: `cards-f6618.firebaseapp.com`
+- `databaseURL`: `https://cards-f6618-default-rtdb.asia-southeast1.firebasedatabase.app`
+- `projectId`: `cards-f6618`
+- `storageBucket`: `cards-f6618.firebasestorage.app`
+- `messagingSenderId`: `105494867189`
+- `appId`: `1:105494867189:web:8ea23072f75446e45529bc`
+- `measurementId`: `G-F0LFL93Z4X`
 
-- `/Users/akbar.rahmanbasha/Library/CloudStorage/OneDrive-SyneosHealth/Documents/Codex/index.html`
+These are now filled in `firebase-config.js`.
 
-## Rules Implemented
+## What changed
 
-- Each player starts with 5 cards.
-- Turn flow: **discard first**, then **draw**.
-- Discard can be 1 or many cards, but all must be same rank.
-- After discarding, player can:
-  - draw one from draw pile, or
-  - pick exactly one card from **previous player's last discard**.
-- If draw pile is empty, all discarded cards are shuffled into new pile.
-- `A=1`, `2..10` face value, `J/Q/K=10`, `Joker=0`.
-- `Show` can be called in discard phase.
 
-## UI Features
+## Gameplay limits updated
 
-- Drag to reorder your cards.
-- Separate panels for:
-  - previous player's discard
-  - current player's discard
-- Every player's last discarded cards are shown.
-- Previous player's tile is highlighted each turn.
-- Bot hands stay face-down on screen.
-- Dramatic suspense reveal when you call show:
-  - opponents revealed one-by-one in ascending points
-  - final win/lose effect animation
+- Human players: up to 20
+- Bot players: up to 20
+- Total players in a match: up to 20
+- Deck copies auto-scale based on player count so dealing/draw pile has enough cards for larger lobbies.
+
+- Firebase modular initialization now exists in `firebase-init.js`.
+- `app.js` continues using a familiar Realtime DB API (`ref().set/get/update/on/off/child`) through a compatibility wrapper.
+- Firebase Hosting config added:
+  - `.firebaserc` (default project: `cards-f6618`)
+  - `firebase.json`
+- `package.json` updated with scripts and firebase dependency.
+
+## Step-by-step to publish to GitHub
+
+Run these in your local machine terminal from this project folder:
+
+```bash
+git checkout work
+git pull --rebase origin work
+
+git add .
+git commit -m "Configure Firebase modular setup and hosting deployment" || true
+
+git push -u origin work
+```
+
+If you want these changes on `main` immediately:
+
+```bash
+git checkout main
+git merge work
+git push origin main
+```
+
+## Step-by-step to deploy to Firebase Hosting
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Install Firebase CLI globally (if not already):
+
+```bash
+npm install -g firebase-tools
+```
+
+3. Login to Firebase:
+
+```bash
+firebase login
+```
+
+4. Confirm project setup (already preconfigured by `.firebaserc`):
+
+```bash
+firebase use cards-f6618
+```
+
+5. Deploy:
+
+```bash
+firebase deploy
+```
+
+6. Firebase CLI output will print your live Hosting URL. Share that URL with your friends.
+
+## Realtime Database rules (dev only)
+
+Use permissive rules only for testing:
+
+```json
+{
+  "rules": {
+    "rooms": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+```
+
+For production, add Firebase Auth and room-scoped security rules.
+
+
+## Realtime sync fix
+
+- Game state sync now only publishes gameplay fields (not per-client online identity), which prevents one player from overwriting another player's local identity/session while joining/starting online rooms.
+
+
+### If cards are blank or friends do not see Show result
+
+- Pull latest code containing the realtime sync hotfix commit (`b50d7da`) and this follow-up normalization/update.
+- Redeploy (`firebase deploy`) so all players use same latest frontend build.
+- Hard refresh browser (Ctrl+F5) on all devices to avoid stale cached JS.
