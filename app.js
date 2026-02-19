@@ -112,9 +112,8 @@ function canCurrentHumanAct() {
   return !state.gameOver && currentPlayer().kind === "human";
 }
 
-function publishOnlineState() {
-  if (!state.online.enabled || !firebaseDb) return;
-  roomRef(state.online.roomId).child("gameState").set(JSON.parse(JSON.stringify({
+function serializeGameState() {
+  return JSON.parse(JSON.stringify({
     players: state.players,
     viewerIndex: state.viewerIndex,
     roundsTarget: state.roundsTarget,
@@ -125,7 +124,27 @@ function publishOnlineState() {
     discardPool: state.discardPool,
     gameOver: state.gameOver,
     revealRunning: state.revealRunning,
-  })));
+  }));
+}
+
+function applyRemoteGameState(gameState) {
+  state.players = gameState.players || [];
+  state.viewerIndex = Number.isInteger(gameState.viewerIndex) ? gameState.viewerIndex : 0;
+  state.roundsTarget = Number.isInteger(gameState.roundsTarget) ? gameState.roundsTarget : 1;
+  state.roundNumber = Number.isInteger(gameState.roundNumber) ? gameState.roundNumber : 1;
+  state.currentPlayerIndex = Number.isInteger(gameState.currentPlayerIndex) ? gameState.currentPlayerIndex : 0;
+  state.phase = gameState.phase || "discard";
+  state.drawPile = gameState.drawPile || [];
+  state.discardPool = gameState.discardPool || [];
+  state.gameOver = Boolean(gameState.gameOver);
+  state.revealRunning = Boolean(gameState.revealRunning);
+  state.selectedHand = new Set();
+  state.selectedPreviousIndex = null;
+}
+
+function publishOnlineState() {
+  if (!state.online.enabled || !firebaseDb) return;
+  roomRef(state.online.roomId).child("gameState").set(serializeGameState());
 }
 
 
@@ -348,9 +367,7 @@ function subscribeRoom(roomId) {
     ui.startOnlineBtn.disabled = !(state.online.isHost && players.length >= 2 && room.status === "lobby");
 
     if (room.gameState) {
-      Object.assign(state, room.gameState);
-      state.selectedHand = new Set();
-      state.selectedPreviousIndex = null;
+      applyRemoteGameState(room.gameState);
       const mine = myPlayerIndex();
       if (mine >= 0) state.viewerIndex = mine;
       ui.setupPanel.classList.add("hidden");
@@ -386,7 +403,7 @@ async function startOnlineGame() {
   startRound();
   ui.setupPanel.classList.add("hidden");
   ui.gamePanel.classList.remove("hidden");
-  await roomRef(roomId).update({ status: "playing", gameState: JSON.parse(JSON.stringify(state)) });
+  await roomRef(roomId).update({ status: "playing", gameState: serializeGameState() });
   setOnlineStatus(`Match started in room ${roomId}.`);
 }
 

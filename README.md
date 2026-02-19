@@ -104,3 +104,8 @@ Use permissive rules only for testing:
 ```
 
 For production, add Firebase Auth and room-scoped security rules.
+
+
+## Realtime sync fix
+
+- Game state sync now only publishes gameplay fields (not per-client online identity), which prevents one player from overwriting another player's local identity/session while joining/starting online rooms.
