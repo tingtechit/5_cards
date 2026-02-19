@@ -109,3 +109,10 @@ For production, add Firebase Auth and room-scoped security rules.
 ## Realtime sync fix
 
 - Game state sync now only publishes gameplay fields (not per-client online identity), which prevents one player from overwriting another player's local identity/session while joining/starting online rooms.
+
+
+### If cards are blank or friends do not see Show result
+
+- Pull latest code containing the realtime sync hotfix commit (`b50d7da`) and this follow-up normalization/update.
+- Redeploy (`firebase deploy`) so all players use same latest frontend build.
+- Hard refresh browser (Ctrl+F5) on all devices to avoid stale cached JS.

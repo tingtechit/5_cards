@@ -63,9 +63,11 @@ const state = {
     isHost: false,
     unsubRoom: null,
   },
+  lastShowPayload: null,
 };
 
 let firebaseDb = null;
+let lastSeenShowEventId = null;
 
 let dragFromIndex = null;
 let audioCtx;
@@ -103,6 +105,25 @@ function sanitizeRoomCode(value) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
 }
 
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => value[k]);
+  }
+  return [];
+}
+
+function maybePlaySyncedShow() {
+  const payload = state.lastShowPayload;
+  if (!payload || !payload.eventId || payload.eventId === lastSeenShowEventId) return;
+  lastSeenShowEventId = payload.eventId;
+  const additions = new Map(payload.additions || []);
+  openRevealModal(payload.showerIndex, payload.strictLowest, payload.reveal || [], additions);
+}
+
 function myPlayerIndex() {
   return state.players.findIndex((p) => p.id === state.online.playerId);
 }
@@ -124,20 +145,22 @@ function serializeGameState() {
     discardPool: state.discardPool,
     gameOver: state.gameOver,
     revealRunning: state.revealRunning,
+    lastShowPayload: state.lastShowPayload,
   }));
 }
 
 function applyRemoteGameState(gameState) {
-  state.players = gameState.players || [];
+  state.players = normalizeList(gameState.players);
   state.viewerIndex = Number.isInteger(gameState.viewerIndex) ? gameState.viewerIndex : 0;
   state.roundsTarget = Number.isInteger(gameState.roundsTarget) ? gameState.roundsTarget : 1;
   state.roundNumber = Number.isInteger(gameState.roundNumber) ? gameState.roundNumber : 1;
   state.currentPlayerIndex = Number.isInteger(gameState.currentPlayerIndex) ? gameState.currentPlayerIndex : 0;
   state.phase = gameState.phase || "discard";
-  state.drawPile = gameState.drawPile || [];
-  state.discardPool = gameState.discardPool || [];
+  state.drawPile = normalizeList(gameState.drawPile);
+  state.discardPool = normalizeList(gameState.discardPool);
   state.gameOver = Boolean(gameState.gameOver);
   state.revealRunning = Boolean(gameState.revealRunning);
+  state.lastShowPayload = gameState.lastShowPayload || null;
   state.selectedHand = new Set();
   state.selectedPreviousIndex = null;
 }
@@ -280,6 +303,7 @@ function startRound() {
   state.phase = "discard";
   state.selectedHand.clear();
   state.selectedPreviousIndex = null;
+  state.lastShowPayload = null;
   logLine(`Round ${state.roundNumber} started.`);
 }
 
@@ -373,6 +397,7 @@ function subscribeRoom(roomId) {
       ui.setupPanel.classList.add("hidden");
       ui.gamePanel.classList.remove("hidden");
       render();
+      maybePlaySyncedShow();
     }
   });
 }
@@ -641,6 +666,15 @@ function resolveShow(showerIndex) {
     };
   });
 
+  const eventId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  state.lastShowPayload = {
+    eventId,
+    showerIndex,
+    strictLowest,
+    reveal,
+    additions: [...additions.entries()],
+  };
+  lastSeenShowEventId = eventId;
   playSfx("show");
   openRevealModal(showerIndex, strictLowest, reveal, additions);
 }
