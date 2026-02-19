@@ -116,6 +116,22 @@ function normalizeList(value) {
   return [];
 }
 
+
+function normalizeCardList(value) {
+  return normalizeList(value).filter((c) => c && typeof c === "object" && c.rank);
+}
+
+function normalizePlayer(player) {
+  if (!player || typeof player !== "object") return null;
+  return {
+    ...player,
+    hand: normalizeCardList(player.hand),
+    lastDiscard: normalizeCardList(player.lastDiscard),
+    totalScore: Number(player.totalScore) || 0,
+    name: player.name || "Player",
+  };
+}
+
 function maybePlaySyncedShow() {
   const payload = state.lastShowPayload;
   if (!payload || !payload.eventId || payload.eventId === lastSeenShowEventId) return;
@@ -150,14 +166,14 @@ function serializeGameState() {
 }
 
 function applyRemoteGameState(gameState) {
-  state.players = normalizeList(gameState.players);
+  state.players = normalizeList(gameState.players).map(normalizePlayer).filter(Boolean);
   state.viewerIndex = Number.isInteger(gameState.viewerIndex) ? gameState.viewerIndex : 0;
   state.roundsTarget = Number.isInteger(gameState.roundsTarget) ? gameState.roundsTarget : 1;
   state.roundNumber = Number.isInteger(gameState.roundNumber) ? gameState.roundNumber : 1;
   state.currentPlayerIndex = Number.isInteger(gameState.currentPlayerIndex) ? gameState.currentPlayerIndex : 0;
   state.phase = gameState.phase || "discard";
-  state.drawPile = normalizeList(gameState.drawPile);
-  state.discardPool = normalizeList(gameState.discardPool);
+  state.drawPile = normalizeCardList(gameState.drawPile);
+  state.discardPool = normalizeCardList(gameState.discardPool);
   state.gameOver = Boolean(gameState.gameOver);
   state.revealRunning = Boolean(gameState.revealRunning);
   state.lastShowPayload = gameState.lastShowPayload || null;
