@@ -20,12 +20,12 @@
 
       <div class="form-grid">
         <label>
-          Human Players (1-4)
-          <input id="playerCount" type="number" min="1" max="4" value="1" />
+          Human Players (1-20)
+          <input id="playerCount" type="number" min="1" max="20" value="2" />
         </label>
         <label>
-          Bot Players (0-7)
-          <input id="botCount" type="number" min="0" max="7" value="2" />
+          Bot Players (0-20)
+          <input id="botCount" type="number" min="0" max="20" value="0" />
         </label>
         <label>
           Rounds (1-20)
@@ -39,6 +39,37 @@
       </label>
 
       <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
+      <hr class="setup-separator" />
+      <h3>Online Multiplayer (Firebase)</h3>
+      <p class="tiny">Create a room, share room code, and play in real-time.</p>
+      <label class="name-block">
+        Your display name
+        <input id="onlineName" type="text" placeholder="Your name" />
+      </label>
+      <div class="form-grid online-grid">
+        <button id="createRoomBtn" class="btn">Create Room</button>
+        <input id="roomCodeInput" type="text" placeholder="ROOM123" />
+        <button id="joinRoomBtn" class="btn">Join Room</button>
+      </div>
+      <p id="onlineStatus" class="tiny"></p>
+      <div id="lobbyBox" class="lobby-box">
+        <p class="tiny">Lobby players:</p>
+        <ul id="lobbyPlayers" class="lobby-list"></ul>
+      </div>
+      <button id="startOnlineBtn" class="btn btn-accent" disabled>Start Online Match</button>
+
+
+      <details class="instructions-box" open>
+        <summary>How to play</summary>
+        <ul>
+          <li>Each player gets 5 cards. Keep your total points as low as possible.</li>
+          <li>On your turn: discard first (all selected cards must be same rank), then draw 1 card.</li>
+          <li>You can draw from pile or take exactly 1 card from previous player's discard.</li>
+          <li>Call <strong>Show</strong> during your discard phase when you think you have the lowest hand.</li>
+          <li>Scoring: A=1, 2-10 face value, J/Q/K=10, Joker=0.</li>
+        </ul>
+      </details>
+
       <p id="setupError" class="error"></p>
     </section>
 
@@ -118,6 +149,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="firebase-init.js?v=20260219a"></script>
+  <script type="module" src="app.js?v=20260219a"></script>
 </body>
 </html>
