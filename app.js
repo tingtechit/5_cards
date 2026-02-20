@@ -68,13 +68,16 @@ const state = {
     playerId: `p_${Math.random().toString(36).slice(2, 10)}`,
     isHost: false,
     unsubRoom: null,
+    presenceRef: null,
   },
   lastShowPayload: null,
+  leaveNotice: null,
   setupMode: "online",
 };
 
 let firebaseDb = null;
 let lastSeenShowEventId = null;
+let lastSeenLeaveNoticeId = null;
 
 let dragFromIndex = null;
 let audioCtx;
@@ -110,6 +113,42 @@ function setOnlineStatus(msg) {
 
 function sanitizeRoomCode(value) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+}
+
+
+function setupPresence(roomId) {
+  const playerRef = roomRef(roomId).child(`players/${state.online.playerId}`);
+  state.online.presenceRef = playerRef;
+  if (typeof playerRef.onDisconnectRemove === "function") playerRef.onDisconnectRemove();
+}
+
+function maybeHandleLeaveNotice() {
+  const notice = state.leaveNotice;
+  if (!notice || !notice.id || notice.id === lastSeenLeaveNoticeId) return;
+  lastSeenLeaveNoticeId = notice.id;
+  logLine(notice.text);
+}
+
+function reconcileRoomDepartures(playersEntries) {
+  const activeIds = new Set(playersEntries.map(([id]) => id));
+  const removed = state.players.filter((p) => p.id && !activeIds.has(p.id));
+  if (!removed.length) return;
+
+  const names = removed.map((p) => p.name).join(", ");
+  state.players = state.players.filter((p) => !p.id || activeIds.has(p.id));
+  if (!state.players.length) return;
+
+  if (state.currentPlayerIndex >= state.players.length) state.currentPlayerIndex = 0;
+  const mine = myPlayerIndex();
+  state.viewerIndex = mine >= 0 ? mine : 0;
+  state.selectedHand = new Set();
+  state.selectedPreviousIndex = null;
+
+  const text = `${names} left the room. Game continues.`;
+  const id = `leave_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  state.leaveNotice = { id, text };
+  maybeHandleLeaveNotice();
+  publishOnlineState();
 }
 
 
@@ -215,6 +254,7 @@ function serializeGameState() {
     discardPool: state.discardPool,
     gameOver: state.gameOver,
     lastShowPayload: state.lastShowPayload,
+    leaveNotice: state.leaveNotice,
   }));
 }
 
@@ -230,6 +270,7 @@ function applyRemoteGameState(gameState) {
   state.gameOver = Boolean(gameState.gameOver);
   state.revealRunning = false;
   state.lastShowPayload = gameState.lastShowPayload || null;
+  state.leaveNotice = gameState.leaveNotice || null;
   state.selectedHand = new Set();
   state.selectedPreviousIndex = null;
 }
@@ -373,6 +414,7 @@ function startRound() {
   state.selectedHand.clear();
   state.selectedPreviousIndex = null;
   state.lastShowPayload = null;
+  state.leaveNotice = null;
   logLine(`Round ${state.roundNumber} started.`);
 }
 
@@ -437,6 +479,7 @@ async function createRoom() {
       [state.online.playerId]: { name, joinedAt: Date.now() },
     },
   });
+  setupPresence(roomId);
   subscribeRoom(roomId);
   setOnlineStatus(`Room ${roomId} created. Share this code with friends.`);
 }
@@ -456,6 +499,7 @@ async function joinRoom() {
   state.online.roomId = roomId;
   state.online.enabled = true;
   state.online.isHost = snap.val().hostId === state.online.playerId;
+  setupPresence(roomId);
   subscribeRoom(roomId);
   setOnlineStatus(`Joined room ${roomId}. Waiting for host to start.`);
 }
@@ -479,8 +523,10 @@ function subscribeRoom(roomId) {
       if (mine >= 0) state.viewerIndex = mine;
       ui.setupPanel.classList.add("hidden");
       ui.gamePanel.classList.remove("hidden");
+      reconcileRoomDepartures(players);
       render();
       maybePlaySyncedShow();
+      maybeHandleLeaveNotice();
     }
   });
 }
@@ -960,10 +1006,12 @@ function render() {
     chip.className = `player-chip ${i === state.currentPlayerIndex ? "current" : ""} ${isPrev ? "prev-highlight" : ""}`;
     const last = p.lastDiscard.length ? p.lastDiscard.map(renderCardText).join(" ") : "none";
     const miniBacks = Array.from({ length: Math.min(p.hand.length, 8) }).map(() => '<span class="mini-back"></span>').join("");
+    const turnBadge = i === state.currentPlayerIndex ? `<span class="turn-badge">ACTIVE TURN</span>` : "";
     chip.innerHTML = `
       <div class="player-head">
         <span class="player-avatar">${p.kind === "bot" ? "🤖" : p.avatar}</span>
         <strong>${p.name}${p.kind === "bot" ? " [BOT]" : ""}</strong>
+        ${turnBadge}
       </div>
       <p>Total score: ${p.totalScore}</p>
       <p>Cards in hand: ${p.hand.length}</p>

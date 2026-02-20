@@ -159,3 +159,5 @@ Use this flow:
 - Host can start after at least 2 players are in lobby.
 - When SHOW is pressed by any player, the popup is shown to all players.
 - Reveal order starts with the player who pressed SHOW, then the remaining players.
+
+- If a player disconnects/leaves the room, they are removed and the game continues for remaining players with a leave message in game log.

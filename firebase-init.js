@@ -7,6 +7,8 @@ import {
   get,
   update,
   onValue,
+  remove,
+  onDisconnect,
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -26,6 +28,8 @@ function wrapRef(path) {
     set: (value) => set(pathRef, value),
     get: () => get(pathRef),
     update: (value) => update(pathRef, value),
+    remove: () => remove(pathRef),
+    onDisconnectRemove: () => onDisconnect(pathRef).remove(),
     child: (subPath) => wrapRef(path ? `${path}/${subPath}` : subPath),
     on: (event, callback) => {
       if (event !== "value") throw new Error(`Unsupported event: ${event}`);
