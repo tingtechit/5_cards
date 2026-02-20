@@ -88,7 +88,7 @@ input {
 .tiny { margin: 0 0 4px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 .drag-tip { margin-bottom: 10px; }
 
-.table-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.table-zone { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .stack-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: rgba(5, 29, 35, 0.7); }
 .stack-card { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.24); }
 .stack-card h3 { margin-bottom: 10px; }
@@ -98,7 +98,7 @@ input {
 }
 
 .discard-visual {
-  min-height: 58px; border-radius: 10px; border: 1px dashed rgba(187, 230, 211, 0.36);
+  min-height: 58px; max-height: 120px; overflow: auto; border-radius: 10px; border: 1px dashed rgba(187, 230, 211, 0.36);
   display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; flex-wrap: wrap;
 }
 .discard-mini {
@@ -117,8 +117,8 @@ input {
   position: relative; overflow: hidden;
 }
 .player-chip { background: linear-gradient(145deg, rgba(6, 29, 36, 0.85), rgba(4, 20, 25, 0.76)); }
-.player-chip.current { border-color: rgba(255, 213, 138, 0.55); box-shadow: 0 0 0 1px rgba(255, 213, 138, 0.4) inset; animation: pulseTurn 1.4s ease-in-out infinite; }
-.player-chip.prev-highlight { box-shadow: 0 0 0 2px rgba(78, 240, 173, 0.55) inset; }
+.player-chip.current { border-color: rgba(255, 213, 138, 0.95); box-shadow: 0 0 0 2px rgba(255, 213, 138, 0.6) inset, 0 0 18px rgba(255, 213, 138, 0.28); animation: pulseTurn 1.1s ease-in-out infinite; }
+.player-chip.prev-highlight { box-shadow: none; border-color: var(--line); }
 .player-chip p { margin: 3px 0; color: var(--muted); font-size: 13px; }
 .player-head { display: flex; align-items: center; gap: 8px; }
 .player-avatar {
@@ -319,23 +319,32 @@ input {
   }
 
   .table-zone {
-    display: flex;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    padding-bottom: 2px;
-    scroll-snap-type: x mandatory;
+    align-items: stretch;
   }
   .stack-card {
-    min-width: 220px;
-    scroll-snap-align: start;
+    min-width: 0;
+    max-width: 100%;
     padding: 10px;
+    overflow: hidden;
   }
   .stack-card h3 {
-    font-size: 15px;
+    font-size: 14px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
   }
   .card-back {
     width: 64px;
     height: 90px;
+  }
+
+  .discard-visual {
+    max-height: 90px;
+    padding: 6px;
+    gap: 4px;
   }
 
   .controls {
@@ -426,4 +435,79 @@ input {
   .fx-lose img {
     max-width: 180px;
   }
+}
+
+
+.setup-separator { border: 0; border-top: 1px solid rgba(255,255,255,0.15); margin: 18px 0; }
+.online-grid { align-items: end; }
+#onlineStatus { margin-top: 8px; min-height: 20px; color: #9fe4c8; }
+
+.voice-controls {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+#voiceStatus {
+  margin: 0;
+  min-width: 170px;
+}
+
+.instructions-box {
+  margin-top: 14px;
+  border: 1px solid rgba(157, 223, 203, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(8, 33, 41, 0.55);
+}
+.instructions-box summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #c9f7e5;
+}
+.instructions-box ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #d5f2e7;
+}
+.instructions-box li { margin: 6px 0; }
+
+.lobby-box {
+  margin-top: 8px;
+  border: 1px solid rgba(157, 223, 203, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(8, 33, 41, 0.45);
+}
+.lobby-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: #d6f3e7;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+.tab-btn {
+  min-width: 120px;
+  opacity: 0.8;
+}
+.tab-btn.active {
+  opacity: 1;
+  border-color: rgba(255, 214, 133, 0.95);
+  box-shadow: 0 0 0 2px rgba(255, 214, 133, 0.45) inset, 0 4px 12px rgba(255, 214, 133, 0.2);
+}
+.mode-section.hidden { display: none; }
+
+#startOnlineBtn { margin-top: 10px; }
+
+.game-instructions { margin: 8px 0 14px; }
+
+
+.game-voice-controls {
+  margin-top: 10px;
+  margin-bottom: 10px;
 }

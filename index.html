@@ -18,27 +18,76 @@
       <h1>5 Cards</h1>
       <p class="sub">Discard first, then draw. Keep your total lowest and call <strong>Show</strong> at the right time.</p>
 
-      <div class="form-grid">
-        <label>
-          Human Players (1-4)
-          <input id="playerCount" type="number" min="1" max="4" value="1" />
-        </label>
-        <label>
-          Bot Players (0-7)
-          <input id="botCount" type="number" min="0" max="7" value="2" />
-        </label>
-        <label>
-          Rounds (1-20)
-          <input id="roundCount" type="number" min="1" max="20" value="5" />
-        </label>
+      <div class="mode-tabs">
+        <button id="onlineTabBtn" type="button" class="btn tab-btn active">Online</button>
+        <button id="localTabBtn" type="button" class="btn tab-btn">Local</button>
       </div>
 
-      <label class="name-block">
-        Human names (comma-separated)
-        <input id="playerNames" type="text" placeholder="You" />
-      </label>
+      <section id="localModeSection" class="mode-section hidden">
+        <div class="form-grid">
+          <label>
+            Human Players (1-20)
+            <input id="playerCount" type="number" min="1" max="20" value="2" />
+          </label>
+          <label>
+            Bot Players (0-20)
+            <input id="botCount" type="number" min="0" max="20" value="0" />
+          </label>
+          <label>
+            Rounds (1-20)
+            <input id="roundCount" type="number" min="1" max="20" value="5" />
+          </label>
+        </div>
 
-      <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
+        <label class="name-block">
+          Human names (comma-separated)
+          <input id="playerNames" type="text" placeholder="You" />
+        </label>
+
+        <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
+      </section>
+
+      <section id="onlineModeSection" class="mode-section">
+        <p class="tiny">Create a room, share room code, and play in real-time.</p>
+        <label class="name-block">
+          Your display name
+          <input id="onlineName" type="text" placeholder="Your name" />
+        </label>
+        <div class="form-grid">
+          <label>
+            Online Rounds (1-20)
+            <input id="onlineRoundCount" type="number" min="1" max="20" value="5" />
+          </label>
+        </div>
+        <div class="form-grid online-grid">
+          <button id="createRoomBtn" class="btn">Create Room</button>
+          <input id="roomCodeInput" type="text" placeholder="ROOM123" />
+          <button id="joinRoomBtn" class="btn">Join Room</button>
+        </div>
+        <p id="onlineStatus" class="tiny"></p>
+        <div class="voice-controls">
+          <button id="voiceJoinBtn" class="btn" type="button">Join Voice Chat</button>
+          <button id="voiceMuteBtn" class="btn" type="button" disabled>Mute Mic</button>
+          <p id="voiceStatus" class="tiny">Voice: off</p>
+        </div>
+        <div id="lobbyBox" class="lobby-box">
+          <p class="tiny">Lobby players:</p>
+          <ul id="lobbyPlayers" class="lobby-list"></ul>
+        </div>
+        <button id="startOnlineBtn" class="btn btn-accent" disabled>Start Online Match</button>
+      </section>
+
+      <details class="instructions-box" open>
+        <summary>How to play</summary>
+        <ul>
+          <li>Each player gets 5 cards. Keep your total points as low as possible.</li>
+          <li>On your turn: discard first (all selected cards must be same rank), then draw 1 card.</li>
+          <li>You can draw from pile or take exactly 1 card from previous player's discard.</li>
+          <li>Call <strong>Show</strong> during your discard phase when you think you have the lowest hand.</li>
+          <li>Scoring: A=1, 2-10 face value, J/Q/K=10, Joker=0.</li>
+        </ul>
+      </details>
+
       <p id="setupError" class="error"></p>
     </section>
 
@@ -73,17 +122,27 @@
           <button id="takeDiscardBtn" class="btn">Pick 1 Card</button>
         </article>
 
-        <article class="stack-card discard-stack">
-          <h3>Current Top Discard</h3>
-          <div id="currentDiscardVisual" class="discard-visual">Empty</div>
-          <p id="currentDiscardMeta">No current discard</p>
-        </article>
       </section>
 
       <section class="controls">
         <button id="showBtn" class="btn btn-accent">Show</button>
         <button id="discardBtn" class="btn btn-danger" disabled>Discard Selected</button>
       </section>
+
+      <section class="voice-controls game-voice-controls">
+        <button id="gameVoiceJoinBtn" class="btn" type="button">Join Voice Chat</button>
+        <button id="gameVoiceMuteBtn" class="btn" type="button" disabled>Mute Mic</button>
+        <p id="gameVoiceStatus" class="tiny">Voice: off</p>
+      </section>
+
+      <details class="instructions-box game-instructions">
+        <summary>How to play (quick rules)</summary>
+        <ul>
+          <li>Discard first, then draw 1 card from pile or previous player discard.</li>
+          <li>Discarded cards in one move must be same rank.</li>
+          <li>Press Show in discard phase when you think you are lowest.</li>
+        </ul>
+      </details>
 
       <section class="player-strip" id="playerStrip"></section>
 
@@ -118,6 +177,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="firebase-init.js?v=20260219a"></script>
+  <script type="module" src="app.js?v=20260219a"></script>
 </body>
 </html>
