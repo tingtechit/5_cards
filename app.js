@@ -5,6 +5,10 @@ const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const ui = {
   setupPanel: document.getElementById("setupPanel"),
   gamePanel: document.getElementById("gamePanel"),
+  onlineTabBtn: document.getElementById("onlineTabBtn"),
+  localTabBtn: document.getElementById("localTabBtn"),
+  onlineModeSection: document.getElementById("onlineModeSection"),
+  localModeSection: document.getElementById("localModeSection"),
   playerCount: document.getElementById("playerCount"),
   botCount: document.getElementById("botCount"),
   roundCount: document.getElementById("roundCount"),
@@ -66,6 +70,7 @@ const state = {
     unsubRoom: null,
   },
   lastShowPayload: null,
+  setupMode: "online",
 };
 
 let firebaseDb = null;
@@ -105,6 +110,49 @@ function setOnlineStatus(msg) {
 
 function sanitizeRoomCode(value) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+}
+
+
+function setSetupMode(mode) {
+  state.setupMode = mode === "local" ? "local" : "online";
+  const online = state.setupMode === "online";
+  ui.onlineTabBtn.classList.toggle("active", online);
+  ui.localTabBtn.classList.toggle("active", !online);
+  ui.onlineModeSection.classList.toggle("hidden", !online);
+  ui.localModeSection.classList.toggle("hidden", online);
+  ui.setupError.textContent = "";
+}
+
+function initSetupTabs() {
+  ui.onlineTabBtn.addEventListener("click", () => setSetupMode("online"));
+  ui.localTabBtn.addEventListener("click", () => setSetupMode("local"));
+  setSetupMode("online");
+}
+
+function shouldWarnLeave() {
+  return !ui.gamePanel.classList.contains("hidden") || state.online.enabled;
+}
+
+function initLeaveWarning() {
+  const msg = "Are you sure you want to leave? Your current game progress may be lost.";
+  window.addEventListener("beforeunload", (event) => {
+    if (!shouldWarnLeave()) return;
+    event.preventDefault();
+    event.returnValue = msg;
+  });
+
+  history.pushState({ guard: true }, "", location.href);
+  const onPopState = () => {
+    if (!shouldWarnLeave()) return;
+    const leave = window.confirm(msg);
+    if (!leave) {
+      history.pushState({ guard: true }, "", location.href);
+      return;
+    }
+    window.removeEventListener("popstate", onPopState);
+    history.back();
+  };
+  window.addEventListener("popstate", onPopState);
 }
 
 
@@ -162,7 +210,6 @@ function serializeGameState() {
     drawPile: state.drawPile,
     discardPool: state.discardPool,
     gameOver: state.gameOver,
-    revealRunning: state.revealRunning,
     lastShowPayload: state.lastShowPayload,
   }));
 }
@@ -959,4 +1006,6 @@ ui.createRoomBtn.addEventListener("click", createRoom);
 ui.joinRoomBtn.addEventListener("click", joinRoom);
 ui.startOnlineBtn.addEventListener("click", startOnlineGame);
 
+initSetupTabs();
+initLeaveWarning();
 initFirebase();

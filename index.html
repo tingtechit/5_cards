@@ -18,6 +18,12 @@
       <h1>5 Cards</h1>
       <p class="sub">Discard first, then draw. Keep your total lowest and call <strong>Show</strong> at the right time.</p>
 
+      <div class="mode-tabs">
+        <button id="onlineTabBtn" type="button" class="btn tab-btn active">Online</button>
+        <button id="localTabBtn" type="button" class="btn tab-btn">Local</button>
+      </div>
+
+      <section id="localModeSection" class="mode-section hidden">
       <div class="form-grid">
         <label>
           Human Players (1-20)
@@ -39,7 +45,9 @@
       </label>
 
       <button id="startLocalBtn" class="btn btn-primary">Start Game</button>
-      <hr class="setup-separator" />
+      </section>
+
+      <section id="onlineModeSection" class="mode-section">
       <h3>Online Multiplayer (Firebase)</h3>
       <p class="tiny">Create a room, share room code, and play in real-time.</p>
       <label class="name-block">
@@ -69,6 +77,7 @@
           <li>Scoring: A=1, 2-10 face value, J/Q/K=10, Joker=0.</li>
         </ul>
       </details>
+      </section>
 
       <p id="setupError" class="error"></p>
     </section>

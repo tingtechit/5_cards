@@ -464,3 +464,19 @@ input {
   padding-left: 18px;
   color: #d6f3e7;
 }
+
+.mode-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+.tab-btn {
+  min-width: 120px;
+  opacity: 0.8;
+}
+.tab-btn.active {
+  opacity: 1;
+  border-color: rgba(255, 214, 133, 0.7);
+  box-shadow: 0 0 0 1px rgba(255, 214, 133, 0.35) inset;
+}
+.mode-section.hidden { display: none; }
