@@ -118,8 +118,12 @@ function setSetupMode(mode) {
   const online = state.setupMode === "online";
   ui.onlineTabBtn.classList.toggle("active", online);
   ui.localTabBtn.classList.toggle("active", !online);
+  ui.onlineTabBtn.setAttribute("aria-selected", String(online));
+  ui.localTabBtn.setAttribute("aria-selected", String(!online));
   ui.onlineModeSection.classList.toggle("hidden", !online);
   ui.localModeSection.classList.toggle("hidden", online);
+  ui.onlineModeSection.style.display = online ? "block" : "none";
+  ui.localModeSection.style.display = online ? "none" : "block";
   ui.setupError.textContent = "";
 }
 
