@@ -162,6 +162,7 @@ function serializeGameState() {
     drawPile: state.drawPile,
     discardPool: state.discardPool,
     gameOver: state.gameOver,
+    revealRunning: state.revealRunning,
     lastShowPayload: state.lastShowPayload,
   }));
 }
