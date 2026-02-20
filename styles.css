@@ -449,11 +449,6 @@ input {
   gap: 8px;
   align-items: center;
 }
-#voiceStatus {
-  margin: 0;
-  min-width: 170px;
-}
-
 .instructions-box {
   margin-top: 14px;
   border: 1px solid rgba(157, 223, 203, 0.35);
@@ -508,6 +503,15 @@ input {
 
 
 .game-voice-controls {
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin: 12px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(157, 223, 203, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 33, 41, 0.35);
+}
+.game-voice-controls .btn {
+  min-width: 150px;
+}
+.game-voice-controls .tiny {
+  margin: 0;
 }

@@ -21,9 +21,6 @@ const ui = {
   onlineName: document.getElementById("onlineName"),
   roomCodeInput: document.getElementById("roomCodeInput"),
   onlineStatus: document.getElementById("onlineStatus"),
-  voiceJoinBtn: document.getElementById("voiceJoinBtn"),
-  voiceMuteBtn: document.getElementById("voiceMuteBtn"),
-  voiceStatus: document.getElementById("voiceStatus"),
   gameVoiceJoinBtn: document.getElementById("gameVoiceJoinBtn"),
   gameVoiceMuteBtn: document.getElementById("gameVoiceMuteBtn"),
   gameVoiceStatus: document.getElementById("gameVoiceStatus"),
@@ -133,20 +130,14 @@ const RTC_CONFIG = {
 };
 
 function setVoiceStatus(message) {
-  if (ui.voiceStatus) ui.voiceStatus.textContent = message;
   if (ui.gameVoiceStatus) ui.gameVoiceStatus.textContent = message;
 }
 
 function setVoiceJoinLabel(label) {
-  if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = label;
   if (ui.gameVoiceJoinBtn) ui.gameVoiceJoinBtn.textContent = label;
 }
 
 function setVoiceMuteState({ disabled, label }) {
-  if (ui.voiceMuteBtn) {
-    ui.voiceMuteBtn.disabled = disabled;
-    ui.voiceMuteBtn.textContent = label;
-  }
   if (ui.gameVoiceMuteBtn) {
     ui.gameVoiceMuteBtn.disabled = disabled;
     ui.gameVoiceMuteBtn.textContent = label;
@@ -1310,8 +1301,6 @@ ui.nextRoundBtn.addEventListener("click", nextRound);
 ui.createRoomBtn.addEventListener("click", createRoom);
 ui.joinRoomBtn.addEventListener("click", joinRoom);
 ui.startOnlineBtn.addEventListener("click", startOnlineGame);
-ui.voiceJoinBtn?.addEventListener("click", joinVoiceChat);
-ui.voiceMuteBtn?.addEventListener("click", toggleVoiceMute);
 ui.gameVoiceJoinBtn?.addEventListener("click", joinVoiceChat);
 ui.gameVoiceMuteBtn?.addEventListener("click", toggleVoiceMute);
 
@@ -1323,8 +1312,6 @@ initSetupTabs();
 initLeaveWarning();
 initFirebase();
 if (!supportsVoiceChat()) {
-  if (ui.voiceJoinBtn) ui.voiceJoinBtn.disabled = true;
-  if (ui.voiceMuteBtn) ui.voiceMuteBtn.disabled = true;
   if (ui.gameVoiceJoinBtn) ui.gameVoiceJoinBtn.disabled = true;
   if (ui.gameVoiceMuteBtn) ui.gameVoiceMuteBtn.disabled = true;
   setVoiceStatus("Voice unavailable in this browser.");
