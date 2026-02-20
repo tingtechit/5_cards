@@ -12,6 +12,7 @@ const ui = {
   playerCount: document.getElementById("playerCount"),
   botCount: document.getElementById("botCount"),
   roundCount: document.getElementById("roundCount"),
+  onlineRoundCount: document.getElementById("onlineRoundCount"),
   playerNames: document.getElementById("playerNames"),
   startLocalBtn: document.getElementById("startLocalBtn"),
   createRoomBtn: document.getElementById("createRoomBtn"),
@@ -547,7 +548,8 @@ async function startOnlineGame() {
     lastDiscard: [],
   }));
   state.viewerIndex = myPlayerIndex();
-  state.roundsTarget = Number(ui.roundCount.value) || 5;
+  const onlineRounds = Number(ui.onlineRoundCount?.value);
+  state.roundsTarget = Number.isInteger(onlineRounds) && onlineRounds >= 1 && onlineRounds <= 20 ? onlineRounds : 5;
   state.roundNumber = 1;
   state.gameOver = false;
   state.revealRunning = false;
@@ -918,7 +920,7 @@ function showFinalWinnerModal() {
   ui.revealBox.innerHTML = `<p class="reveal-title">Final Standings</p>${ranked
     .map((p, i) => `<p><strong>#${i + 1}</strong> ${p.name} — Total: ${p.totalScore}</p>`)
     .join("")}`;
-  ui.resultFx.innerHTML = '<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">${winner.name} finished 1st and wins the game!</p>';
+  ui.resultFx.innerHTML = `<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">${winner.name} finished 1st and wins the game!</p>`;
   ui.nextRoundBtn.textContent = "Close";
   ui.nextRoundBtn.disabled = false;
 }
