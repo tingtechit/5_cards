@@ -5,11 +5,23 @@ const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const ui = {
   setupPanel: document.getElementById("setupPanel"),
   gamePanel: document.getElementById("gamePanel"),
+  onlineTabBtn: document.getElementById("onlineTabBtn"),
+  localTabBtn: document.getElementById("localTabBtn"),
+  onlineModeSection: document.getElementById("onlineModeSection"),
+  localModeSection: document.getElementById("localModeSection"),
   playerCount: document.getElementById("playerCount"),
   botCount: document.getElementById("botCount"),
   roundCount: document.getElementById("roundCount"),
   playerNames: document.getElementById("playerNames"),
   startLocalBtn: document.getElementById("startLocalBtn"),
+  createRoomBtn: document.getElementById("createRoomBtn"),
+  joinRoomBtn: document.getElementById("joinRoomBtn"),
+  startOnlineBtn: document.getElementById("startOnlineBtn"),
+  onlineName: document.getElementById("onlineName"),
+  roomCodeInput: document.getElementById("roomCodeInput"),
+  onlineStatus: document.getElementById("onlineStatus"),
+  lobbyPlayers: document.getElementById("lobbyPlayers"),
+  lobbyBox: document.getElementById("lobbyBox"),
   setupError: document.getElementById("setupError"),
   roundLabel: document.getElementById("roundLabel"),
   turnLabel: document.getElementById("turnLabel"),
@@ -17,8 +29,6 @@ const ui = {
   drawCount: document.getElementById("drawCount"),
   previousDiscardVisual: document.getElementById("previousDiscardVisual"),
   previousDiscardMeta: document.getElementById("previousDiscardMeta"),
-  currentDiscardVisual: document.getElementById("currentDiscardVisual"),
-  currentDiscardMeta: document.getElementById("currentDiscardMeta"),
   drawPileBtn: document.getElementById("drawPileBtn"),
   takeDiscardBtn: document.getElementById("takeDiscardBtn"),
   showBtn: document.getElementById("showBtn"),
@@ -50,10 +60,224 @@ const state = {
   gameOver: false,
   botTimer: null,
   revealRunning: false,
+  online: {
+    enabled: false,
+    roomId: "",
+    playerId: `p_${Math.random().toString(36).slice(2, 10)}`,
+    isHost: false,
+    unsubRoom: null,
+    presenceRef: null,
+  },
+  lastShowPayload: null,
+  leaveNotice: null,
+  setupMode: "online",
 };
+
+let firebaseDb = null;
+let lastSeenShowEventId = null;
+let lastSeenLeaveNoticeId = null;
 
 let dragFromIndex = null;
 let audioCtx;
+
+
+function initFirebase() {
+  const services = window.firebaseServices;
+  if (!services) {
+    ui.onlineStatus.textContent = "Online mode disabled: firebase-init.js not loaded";
+    return;
+  }
+
+  if (services.initError) {
+    ui.onlineStatus.textContent = services.initError;
+    return;
+  }
+
+  firebaseDb = services.database;
+  ui.onlineStatus.textContent = "Firebase connected. Create or join a room.";
+}
+
+function roomRef(roomId) {
+  return firebaseDb.ref(`rooms/${roomId}`);
+}
+
+function randomRoomCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function setOnlineStatus(msg) {
+  ui.onlineStatus.textContent = msg;
+}
+
+function sanitizeRoomCode(value) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+}
+
+
+function setupPresence(roomId) {
+  const playerRef = roomRef(roomId).child(`players/${state.online.playerId}`);
+  state.online.presenceRef = playerRef;
+  if (typeof playerRef.onDisconnectRemove === "function") playerRef.onDisconnectRemove();
+}
+
+function maybeHandleLeaveNotice() {
+  const notice = state.leaveNotice;
+  if (!notice || !notice.id || notice.id === lastSeenLeaveNoticeId) return;
+  lastSeenLeaveNoticeId = notice.id;
+  logLine(notice.text);
+}
+
+function reconcileRoomDepartures(playersEntries) {
+  const activeIds = new Set(playersEntries.map(([id]) => id));
+  const removed = state.players.filter((p) => p.id && !activeIds.has(p.id));
+  if (!removed.length) return;
+
+  const names = removed.map((p) => p.name).join(", ");
+  state.players = state.players.filter((p) => !p.id || activeIds.has(p.id));
+  if (!state.players.length) return;
+
+  if (state.currentPlayerIndex >= state.players.length) state.currentPlayerIndex = 0;
+  const mine = myPlayerIndex();
+  state.viewerIndex = mine >= 0 ? mine : 0;
+  state.selectedHand = new Set();
+  state.selectedPreviousIndex = null;
+
+  const text = `${names} left the room. Game continues.`;
+  const id = `leave_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  state.leaveNotice = { id, text };
+  maybeHandleLeaveNotice();
+  publishOnlineState();
+}
+
+
+function setSetupMode(mode) {
+  state.setupMode = mode === "local" ? "local" : "online";
+  const online = state.setupMode === "online";
+  ui.onlineTabBtn.classList.toggle("active", online);
+  ui.localTabBtn.classList.toggle("active", !online);
+  ui.onlineTabBtn.setAttribute("aria-selected", String(online));
+  ui.localTabBtn.setAttribute("aria-selected", String(!online));
+  ui.onlineModeSection.classList.toggle("hidden", !online);
+  ui.localModeSection.classList.toggle("hidden", online);
+  ui.onlineModeSection.style.display = online ? "block" : "none";
+  ui.localModeSection.style.display = online ? "none" : "block";
+  ui.setupError.textContent = "";
+}
+
+function initSetupTabs() {
+  ui.onlineTabBtn.addEventListener("click", () => setSetupMode("online"));
+  ui.localTabBtn.addEventListener("click", () => setSetupMode("local"));
+  setSetupMode("online");
+}
+
+function shouldWarnLeave() {
+  return !ui.gamePanel.classList.contains("hidden") || state.online.enabled;
+}
+
+function initLeaveWarning() {
+  const msg = "Are you sure you want to leave? Your current game progress may be lost.";
+  window.addEventListener("beforeunload", (event) => {
+    if (!shouldWarnLeave()) return;
+    event.preventDefault();
+    event.returnValue = msg;
+  });
+
+  history.pushState({ guard: true }, "", location.href);
+  const onPopState = () => {
+    if (!shouldWarnLeave()) return;
+    const leave = window.confirm(msg);
+    if (!leave) {
+      history.pushState({ guard: true }, "", location.href);
+      return;
+    }
+    window.removeEventListener("popstate", onPopState);
+    history.back();
+  };
+  window.addEventListener("popstate", onPopState);
+}
+
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => value[k]);
+  }
+  return [];
+}
+
+
+function normalizeCardList(value) {
+  return normalizeList(value).filter((c) => c && typeof c === "object" && c.rank);
+}
+
+function normalizePlayer(player) {
+  if (!player || typeof player !== "object") return null;
+  return {
+    ...player,
+    hand: normalizeCardList(player.hand),
+    lastDiscard: normalizeCardList(player.lastDiscard),
+    totalScore: Number(player.totalScore) || 0,
+    name: player.name || "Player",
+  };
+}
+
+function maybePlaySyncedShow() {
+  const payload = state.lastShowPayload;
+  if (!payload || !payload.eventId || payload.eventId === lastSeenShowEventId) return;
+  lastSeenShowEventId = payload.eventId;
+  const additionsByIndex = normalizeList(payload.additionsByIndex);
+  openRevealModal(payload.showerIndex, payload.strictLowest, payload.reveal || [], additionsByIndex);
+}
+
+function myPlayerIndex() {
+  return state.players.findIndex((p) => p.id === state.online.playerId);
+}
+
+function canCurrentHumanAct() {
+  if (state.online.enabled) return !state.gameOver && currentPlayer().id === state.online.playerId;
+  return !state.gameOver && currentPlayer().kind === "human";
+}
+
+function serializeGameState() {
+  return JSON.parse(JSON.stringify({
+    players: state.players,
+    viewerIndex: state.viewerIndex,
+    roundsTarget: state.roundsTarget,
+    roundNumber: state.roundNumber,
+    currentPlayerIndex: state.currentPlayerIndex,
+    phase: state.phase,
+    drawPile: state.drawPile,
+    discardPool: state.discardPool,
+    gameOver: state.gameOver,
+    lastShowPayload: state.lastShowPayload,
+    leaveNotice: state.leaveNotice,
+  }));
+}
+
+function applyRemoteGameState(gameState) {
+  state.players = normalizeList(gameState.players).map(normalizePlayer).filter(Boolean);
+  state.viewerIndex = Number.isInteger(gameState.viewerIndex) ? gameState.viewerIndex : 0;
+  state.roundsTarget = Number.isInteger(gameState.roundsTarget) ? gameState.roundsTarget : 1;
+  state.roundNumber = Number.isInteger(gameState.roundNumber) ? gameState.roundNumber : 1;
+  state.currentPlayerIndex = Number.isInteger(gameState.currentPlayerIndex) ? gameState.currentPlayerIndex : 0;
+  state.phase = gameState.phase || "discard";
+  state.drawPile = normalizeCardList(gameState.drawPile);
+  state.discardPool = normalizeCardList(gameState.discardPool);
+  state.gameOver = Boolean(gameState.gameOver);
+  state.revealRunning = false;
+  state.lastShowPayload = gameState.lastShowPayload || null;
+  state.leaveNotice = gameState.leaveNotice || null;
+  state.selectedHand = new Set();
+  state.selectedPreviousIndex = null;
+}
+
+function publishOnlineState() {
+  if (!state.online.enabled || !firebaseDb) return;
+  roomRef(state.online.roomId).child("gameState").set(serializeGameState());
+}
+
 
 function tone(freq, duration = 0.08, type = "triangle", volume = 0.04) {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -114,7 +338,8 @@ function shuffle(list) {
 }
 
 function decksNeeded(playerCount) {
-  return Math.max(1, Math.ceil((playerCount * 5 + 20) / 54));
+  const cardsNeeded = playerCount * 5 + Math.max(20, playerCount * 2);
+  return Math.max(1, Math.ceil(cardsNeeded / 54));
 }
 
 function makeDeck(playerCount) {
@@ -175,6 +400,7 @@ function logLine(text) {
 }
 
 function startRound() {
+  if (!Number.isInteger(state.roundNumber) || state.roundNumber < 1) state.roundNumber = 1;
   const deck = makeDeck(state.players.length);
   for (const p of state.players) {
     p.hand = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
@@ -186,6 +412,8 @@ function startRound() {
   state.phase = "discard";
   state.selectedHand.clear();
   state.selectedPreviousIndex = null;
+  state.lastShowPayload = null;
+  state.leaveNotice = null;
   logLine(`Round ${state.roundNumber} started.`);
 }
 
@@ -194,9 +422,9 @@ function startGame() {
   const botCount = Number(ui.botCount.value);
   const rounds = Number(ui.roundCount.value);
 
-  if (!Number.isInteger(humanCount) || humanCount < 1 || humanCount > 4) return (ui.setupError.textContent = "Human players must be 1..4");
-  if (!Number.isInteger(botCount) || botCount < 0 || botCount > 7) return (ui.setupError.textContent = "Bot players must be 0..7");
-  if (humanCount + botCount < 2 || humanCount + botCount > 8) return (ui.setupError.textContent = "Total players must be 2..8");
+  if (!Number.isInteger(humanCount) || humanCount < 1 || humanCount > 20) return (ui.setupError.textContent = "Human players must be 1..20");
+  if (!Number.isInteger(botCount) || botCount < 0 || botCount > 20) return (ui.setupError.textContent = "Bot players must be 0..20");
+  if (humanCount + botCount < 2 || humanCount + botCount > 20) return (ui.setupError.textContent = "Total players must be 2..20");
   if (!Number.isInteger(rounds) || rounds < 1 || rounds > 20) return (ui.setupError.textContent = "Rounds must be 1..20");
 
   const names = normalizeNames(humanCount, ui.playerNames.value);
@@ -218,13 +446,125 @@ function startGame() {
   maybeRunBot();
 }
 
+
+
+function renderLobbyPlayers(players) {
+  if (!ui.lobbyPlayers) return;
+  ui.lobbyPlayers.innerHTML = "";
+  players.forEach(([id, p]) => {
+    const li = document.createElement("li");
+    const me = id === state.online.playerId ? " (You)" : "";
+    li.textContent = `${p.name || "Player"}${me}`;
+    ui.lobbyPlayers.appendChild(li);
+  });
+}
+
+async function createRoom() {
+  if (!firebaseDb) return;
+  const name = ui.onlineName.value.trim();
+  if (!name) return setOnlineStatus("Enter your display name first.");
+  const roomId = randomRoomCode();
+  state.online.roomId = roomId;
+  state.online.enabled = true;
+  state.online.isHost = true;
+  ui.roomCodeInput.value = roomId;
+
+  const room = roomRef(roomId);
+  await room.set({
+    hostId: state.online.playerId,
+    status: "lobby",
+    createdAt: Date.now(),
+    players: {
+      [state.online.playerId]: { name, joinedAt: Date.now() },
+    },
+  });
+  setupPresence(roomId);
+  subscribeRoom(roomId);
+  setOnlineStatus(`Room ${roomId} created. Share this code with friends.`);
+}
+
+async function joinRoom() {
+  if (!firebaseDb) return;
+  const name = ui.onlineName.value.trim();
+  if (!name) return setOnlineStatus("Enter your display name first.");
+  const roomId = sanitizeRoomCode(ui.roomCodeInput.value);
+  if (!roomId) return setOnlineStatus("Enter a valid room code.");
+
+  const room = roomRef(roomId);
+  const snap = await room.get();
+  if (!snap.exists()) return setOnlineStatus("Room not found.");
+
+  await room.child(`players/${state.online.playerId}`).set({ name, joinedAt: Date.now() });
+  state.online.roomId = roomId;
+  state.online.enabled = true;
+  state.online.isHost = snap.val().hostId === state.online.playerId;
+  setupPresence(roomId);
+  subscribeRoom(roomId);
+  setOnlineStatus(`Joined room ${roomId}. Waiting for host to start.`);
+}
+
+function subscribeRoom(roomId) {
+  if (state.online.unsubRoom) state.online.unsubRoom.off();
+  const ref = roomRef(roomId);
+  state.online.unsubRoom = ref;
+  ref.on("value", (snap) => {
+    const room = snap.val();
+    if (!room) return;
+
+    const players = Object.entries(room.players || {});
+    renderLobbyPlayers(players);
+    if (room.status === "lobby") setOnlineStatus(`Lobby: ${players.length} player(s) in room ${roomId}`);
+    ui.startOnlineBtn.disabled = !(state.online.isHost && players.length >= 2 && room.status === "lobby");
+
+    if (room.gameState) {
+      applyRemoteGameState(room.gameState);
+      const mine = myPlayerIndex();
+      if (mine >= 0) state.viewerIndex = mine;
+      ui.setupPanel.classList.add("hidden");
+      ui.gamePanel.classList.remove("hidden");
+      reconcileRoomDepartures(players);
+      render();
+      maybePlaySyncedShow();
+      maybeHandleLeaveNotice();
+    }
+  });
+}
+
+async function startOnlineGame() {
+  if (!state.online.enabled || !state.online.isHost) return;
+  const roomId = state.online.roomId;
+  const snap = await roomRef(roomId).child("players").get();
+  const allPlayers = Object.entries(snap.val() || {});
+  if (allPlayers.length < 2) return setOnlineStatus("Need at least 2 players to start.");
+
+  state.players = allPlayers.map(([id, p]) => ({
+    id,
+    name: p.name,
+    kind: "human",
+    avatar: avatarForName(p.name),
+    hand: [],
+    totalScore: 0,
+    lastDiscard: [],
+  }));
+  state.viewerIndex = myPlayerIndex();
+  state.roundsTarget = Number(ui.roundCount.value) || 5;
+  state.roundNumber = 1;
+  state.gameOver = false;
+  state.revealRunning = false;
+  ui.logBox.innerHTML = "";
+  ui.resultPanel.classList.add("hidden");
+  startRound();
+  ui.setupPanel.classList.add("hidden");
+  ui.gamePanel.classList.remove("hidden");
+  await roomRef(roomId).update({ status: "playing", gameState: serializeGameState() });
+  setOnlineStatus(`Match started with ${allPlayers.length} players in room ${roomId}.`);
+}
+
+
 function currentPlayer() {
   return state.players[state.currentPlayerIndex];
 }
 
-function canCurrentHumanAct() {
-  return !state.gameOver && currentPlayer().kind === "human";
-}
 
 function previousPlayerIndex() {
   return (state.currentPlayerIndex - 1 + state.players.length) % state.players.length;
@@ -240,6 +580,7 @@ function nextTurn() {
   state.selectedHand.clear();
   state.selectedPreviousIndex = null;
   render();
+  publishOnlineState();
   maybeRunBot();
 }
 
@@ -296,6 +637,7 @@ function discardSelected() {
   playSfx("discard");
   logLine(`${cp.name} discarded: ${group.map(renderCardText).join(" ")}.`);
   render();
+  publishOnlineState();
 }
 
 function drawFromPile() {
@@ -309,6 +651,7 @@ function drawFromPile() {
   playSfx("draw");
   logLine(`${cp.name} drew from pile.`);
   nextTurn();
+  publishOnlineState();
 }
 
 function selectPreviousDiscardCard(idx) {
@@ -337,6 +680,7 @@ function takePreviousDiscardOne() {
   playSfx("draw");
   logLine(`${cp.name} picked from previous discard: ${renderCardText(card)}.`);
   nextTurn();
+  publishOnlineState();
 }
 
 function chooseBestDiscard(hand) {
@@ -416,6 +760,7 @@ function showNow() {
   const cp = currentPlayer();
   if (state.gameOver || state.phase !== "discard" || cp.kind !== "human") return;
   resolveShow(state.currentPlayerIndex);
+  publishOnlineState();
 }
 
 function resolveShow(showerIndex) {
@@ -423,7 +768,7 @@ function resolveShow(showerIndex) {
   const showerPts = handPoints(shower.hand);
   const strictLowest = state.players.every((p, i) => i === showerIndex || showerPts < handPoints(p.hand));
 
-  const additions = new Map();
+  const additionsByIndex = [];
   const cardTie = (a, b) => {
     const pa = cardPoints(a);
     const pb = cardPoints(b);
@@ -438,7 +783,7 @@ function resolveShow(showerIndex) {
     else if (i === showerIndex) add = 50;
     else add = pts <= showerPts ? 0 : pts;
     p.totalScore += add;
-    additions.set(p.name, add);
+    additionsByIndex[i] = add;
     return {
       index: i,
       name: p.name,
@@ -449,17 +794,27 @@ function resolveShow(showerIndex) {
     };
   });
 
+  const eventId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  state.lastShowPayload = {
+    eventId,
+    showerIndex,
+    strictLowest,
+    reveal,
+    additionsByIndex,
+  };
+  lastSeenShowEventId = eventId;
   playSfx("show");
-  openRevealModal(showerIndex, strictLowest, reveal, additions);
+  openRevealModal(showerIndex, strictLowest, reveal, additionsByIndex);
 }
 
-async function openRevealModal(showerIndex, strictLowest, reveal, additions) {
+async function openRevealModal(showerIndex, strictLowest, reveal, additionsByIndex) {
   if (state.revealRunning) return;
   state.revealRunning = true;
 
   const shower = state.players[showerIndex];
-  const isViewerShow = showerIndex === state.viewerIndex;
-  const sorted = [...reveal].sort((a, b) => a.points - b.points);
+  const showerEntry = reveal.find((r) => r.index === showerIndex);
+  const others = reveal.filter((r) => r.index !== showerIndex).sort((a, b) => a.points - b.points);
+  const sorted = showerEntry ? [showerEntry, ...others] : others;
 
   ui.modalTitle.textContent = `${shower.name} called SHOW`;
   ui.revealBox.innerHTML = "";
@@ -508,22 +863,22 @@ async function openRevealModal(showerIndex, strictLowest, reveal, additions) {
       await sleep(420);
     }
     col.querySelector(".reveal-points strong").textContent = String(r.points);
-    col.querySelector(".reveal-add strong").textContent = `+${additions.get(r.name)}`;
+    const addValue = additionsByIndex[r.index] ?? 0;
+    col.querySelector(".reveal-add strong").textContent = `+${addValue}`;
     col.querySelector(".reveal-total strong").textContent = String(r.total);
   };
 
-  if (isViewerShow) {
-    for (const r of sorted) await revealOne(r, 850);
-    const win = strictLowest;
-    if (win) {
-      ui.resultPanel.classList.add("result-win");
-      ui.resultFx.innerHTML = '<div class="fx-win"><img alt=\"Fireworks\" src=\"https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif\" /></div><p class=\"win-text\">You WON this round!</p>';
-    } else {
-      ui.resultPanel.classList.add("result-lose");
-      ui.resultFx.innerHTML = '<div class="fx-lose"><img alt=\"Sad\" src=\"https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif\" /></div><p class=\"lose-text\">You LOST this round.</p>';
-    }
+  for (const r of sorted) await revealOne(r, 220);
+
+  const viewerAdd = additionsByIndex[state.viewerIndex] ?? 0;
+  if (viewerAdd === 0) {
+    ui.resultPanel.classList.add("result-win");
+    ui.resultFx.innerHTML = '<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">You WON this round! (+0)</p>';
+  } else if (viewerAdd === 50) {
+    ui.resultPanel.classList.add("result-lose");
+    ui.resultFx.innerHTML = '<div class="fx-lose"><img alt="Sad" src="https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif" /></div><p class="lose-text">You LOST this round. (+50)</p>';
   } else {
-    for (const r of sorted) await revealOne(r, 100);
+    ui.resultFx.innerHTML = `<p class="reveal-title">Round Add: +${viewerAdd}</p>`;
   }
 
   ui.nextRoundBtn.textContent = state.roundNumber >= state.roundsTarget ? "Finish Game" : "Next Round";
@@ -553,13 +908,35 @@ function renderResultBackCard() {
   return el;
 }
 
+
+function showFinalWinnerModal() {
+  const ranked = [...state.players].sort((a, b) => a.totalScore - b.totalScore);
+  const winner = ranked[0];
+  ui.modalTitle.textContent = `Game Winner: ${winner.name}`;
+  ui.resultPanel.classList.remove("hidden", "result-lose");
+  ui.resultPanel.classList.add("result-win");
+  ui.revealBox.innerHTML = `<p class="reveal-title">Final Standings</p>${ranked
+    .map((p, i) => `<p><strong>#${i + 1}</strong> ${p.name} — Total: ${p.totalScore}</p>`)
+    .join("")}`;
+  ui.resultFx.innerHTML = '<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">${winner.name} finished 1st and wins the game!</p>';
+  ui.nextRoundBtn.textContent = "Close";
+  ui.nextRoundBtn.disabled = false;
+}
+
 function nextRound() {
+  if (state.gameOver) {
+    ui.resultPanel.classList.remove("result-win", "result-lose");
+    ui.resultPanel.classList.add("hidden");
+    render();
+    return;
+  }
   ui.resultPanel.classList.remove("result-win", "result-lose");
   ui.resultPanel.classList.add("hidden");
   if (state.roundNumber >= state.roundsTarget) {
     state.gameOver = true;
     const winner = [...state.players].sort((a, b) => a.totalScore - b.totalScore)[0];
     logLine(`Game over. Winner: ${winner.name} (${winner.totalScore}).`);
+    showFinalWinnerModal();
     render();
     return;
   }
@@ -567,6 +944,7 @@ function nextRound() {
   state.roundNumber += 1;
   startRound();
   render();
+  publishOnlineState();
   maybeRunBot();
 }
 
@@ -604,12 +982,11 @@ function renderCardFace(card, selectable, selected, index) {
 
 function render() {
   const cp = currentPlayer();
-  if (cp.kind === "human") state.viewerIndex = state.currentPlayerIndex;
+  if (!state.online.enabled && cp.kind === "human") state.viewerIndex = state.currentPlayerIndex;
   const viewer = state.players[state.viewerIndex] || cp;
   const viewerTurn = canCurrentHumanAct();
   const prevIdx = previousPlayerIndex();
   const prevGroup = previousDiscardGroup();
-  const topGroup = cp.lastDiscard;
 
   ui.roundLabel.textContent = `${state.roundNumber} / ${state.roundsTarget}`;
   ui.turnLabel.textContent = state.gameOver ? "Game Finished" : cp.name;
@@ -631,15 +1008,6 @@ function render() {
       ui.previousDiscardVisual.appendChild(b);
     });
     ui.previousDiscardMeta.textContent = `From ${state.players[prevIdx].name} (${prevGroup.length} card(s))`;
-  }
-
-  ui.currentDiscardVisual.innerHTML = "";
-  if (!topGroup.length) {
-    ui.currentDiscardVisual.textContent = "Empty";
-    ui.currentDiscardMeta.textContent = "No current discard";
-  } else {
-    topGroup.forEach((card) => ui.currentDiscardVisual.appendChild(makeMiniCard(card)));
-    ui.currentDiscardMeta.textContent = `${cp.name}'s discard (${topGroup.length} card(s))`;
   }
 
   ui.playerStrip.innerHTML = "";
@@ -693,3 +1061,12 @@ ui.drawPileBtn.addEventListener("click", drawFromPile);
 ui.takeDiscardBtn.addEventListener("click", takePreviousDiscardOne);
 ui.showBtn.addEventListener("click", showNow);
 ui.nextRoundBtn.addEventListener("click", nextRound);
+
+
+ui.createRoomBtn.addEventListener("click", createRoom);
+ui.joinRoomBtn.addEventListener("click", joinRoom);
+ui.startOnlineBtn.addEventListener("click", startOnlineGame);
+
+initSetupTabs();
+initLeaveWarning();
+initFirebase();
