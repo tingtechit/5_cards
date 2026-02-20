@@ -29,8 +29,6 @@ const ui = {
   drawCount: document.getElementById("drawCount"),
   previousDiscardVisual: document.getElementById("previousDiscardVisual"),
   previousDiscardMeta: document.getElementById("previousDiscardMeta"),
-  currentDiscardVisual: document.getElementById("currentDiscardVisual"),
-  currentDiscardMeta: document.getElementById("currentDiscardMeta"),
   drawPileBtn: document.getElementById("drawPileBtn"),
   takeDiscardBtn: document.getElementById("takeDiscardBtn"),
   showBtn: document.getElementById("showBtn"),
@@ -402,6 +400,7 @@ function logLine(text) {
 }
 
 function startRound() {
+  if (!Number.isInteger(state.roundNumber) || state.roundNumber < 1) state.roundNumber = 1;
   const deck = makeDeck(state.players.length);
   for (const p of state.players) {
     p.hand = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
@@ -909,13 +908,35 @@ function renderResultBackCard() {
   return el;
 }
 
+
+function showFinalWinnerModal() {
+  const ranked = [...state.players].sort((a, b) => a.totalScore - b.totalScore);
+  const winner = ranked[0];
+  ui.modalTitle.textContent = `Game Winner: ${winner.name}`;
+  ui.resultPanel.classList.remove("hidden", "result-lose");
+  ui.resultPanel.classList.add("result-win");
+  ui.revealBox.innerHTML = `<p class="reveal-title">Final Standings</p>${ranked
+    .map((p, i) => `<p><strong>#${i + 1}</strong> ${p.name} — Total: ${p.totalScore}</p>`)
+    .join("")}`;
+  ui.resultFx.innerHTML = '<div class="fx-win"><img alt="Fireworks" src="https://media.giphy.com/media/26tOZ42Mg6pbTUPHW/giphy.gif" /></div><p class="win-text">${winner.name} finished 1st and wins the game!</p>';
+  ui.nextRoundBtn.textContent = "Close";
+  ui.nextRoundBtn.disabled = false;
+}
+
 function nextRound() {
+  if (state.gameOver) {
+    ui.resultPanel.classList.remove("result-win", "result-lose");
+    ui.resultPanel.classList.add("hidden");
+    render();
+    return;
+  }
   ui.resultPanel.classList.remove("result-win", "result-lose");
   ui.resultPanel.classList.add("hidden");
   if (state.roundNumber >= state.roundsTarget) {
     state.gameOver = true;
     const winner = [...state.players].sort((a, b) => a.totalScore - b.totalScore)[0];
     logLine(`Game over. Winner: ${winner.name} (${winner.totalScore}).`);
+    showFinalWinnerModal();
     render();
     return;
   }
@@ -966,7 +987,6 @@ function render() {
   const viewerTurn = canCurrentHumanAct();
   const prevIdx = previousPlayerIndex();
   const prevGroup = previousDiscardGroup();
-  const topGroup = cp.lastDiscard;
 
   ui.roundLabel.textContent = `${state.roundNumber} / ${state.roundsTarget}`;
   ui.turnLabel.textContent = state.gameOver ? "Game Finished" : cp.name;
@@ -988,15 +1008,6 @@ function render() {
       ui.previousDiscardVisual.appendChild(b);
     });
     ui.previousDiscardMeta.textContent = `From ${state.players[prevIdx].name} (${prevGroup.length} card(s))`;
-  }
-
-  ui.currentDiscardVisual.innerHTML = "";
-  if (!topGroup.length) {
-    ui.currentDiscardVisual.textContent = "Empty";
-    ui.currentDiscardMeta.textContent = "No current discard";
-  } else {
-    topGroup.forEach((card) => ui.currentDiscardVisual.appendChild(makeMiniCard(card)));
-    ui.currentDiscardMeta.textContent = `${cp.name}'s discard (${topGroup.length} card(s))`;
   }
 
   ui.playerStrip.innerHTML = "";
