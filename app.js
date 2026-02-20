@@ -16,6 +16,8 @@ const ui = {
   onlineName: document.getElementById("onlineName"),
   roomCodeInput: document.getElementById("roomCodeInput"),
   onlineStatus: document.getElementById("onlineStatus"),
+  lobbyPlayers: document.getElementById("lobbyPlayers"),
+  lobbyBox: document.getElementById("lobbyBox"),
   setupError: document.getElementById("setupError"),
   roundLabel: document.getElementById("roundLabel"),
   turnLabel: document.getElementById("turnLabel"),
@@ -175,7 +177,7 @@ function applyRemoteGameState(gameState) {
   state.drawPile = normalizeCardList(gameState.drawPile);
   state.discardPool = normalizeCardList(gameState.discardPool);
   state.gameOver = Boolean(gameState.gameOver);
-  state.revealRunning = Boolean(gameState.revealRunning);
+  state.revealRunning = false;
   state.lastShowPayload = gameState.lastShowPayload || null;
   state.selectedHand = new Set();
   state.selectedPreviousIndex = null;
@@ -353,6 +355,18 @@ function startGame() {
 }
 
 
+
+function renderLobbyPlayers(players) {
+  if (!ui.lobbyPlayers) return;
+  ui.lobbyPlayers.innerHTML = "";
+  players.forEach(([id, p]) => {
+    const li = document.createElement("li");
+    const me = id === state.online.playerId ? " (You)" : "";
+    li.textContent = `${p.name || "Player"}${me}`;
+    ui.lobbyPlayers.appendChild(li);
+  });
+}
+
 async function createRoom() {
   if (!firebaseDb) return;
   const name = ui.onlineName.value.trim();
@@ -404,6 +418,8 @@ function subscribeRoom(roomId) {
     if (!room) return;
 
     const players = Object.entries(room.players || {});
+    renderLobbyPlayers(players);
+    if (room.status === "lobby") setOnlineStatus(`Lobby: ${players.length} player(s) in room ${roomId}`);
     ui.startOnlineBtn.disabled = !(state.online.isHost && players.length >= 2 && room.status === "lobby");
 
     if (room.gameState) {
@@ -445,7 +461,7 @@ async function startOnlineGame() {
   ui.setupPanel.classList.add("hidden");
   ui.gamePanel.classList.remove("hidden");
   await roomRef(roomId).update({ status: "playing", gameState: serializeGameState() });
-  setOnlineStatus(`Match started in room ${roomId}.`);
+  setOnlineStatus(`Match started with ${allPlayers.length} players in room ${roomId}.`);
 }
 
 
@@ -700,7 +716,9 @@ async function openRevealModal(showerIndex, strictLowest, reveal, additionsByInd
   state.revealRunning = true;
 
   const shower = state.players[showerIndex];
-  const sorted = [...reveal].sort((a, b) => a.points - b.points);
+  const showerEntry = reveal.find((r) => r.index === showerIndex);
+  const others = reveal.filter((r) => r.index !== showerIndex).sort((a, b) => a.points - b.points);
+  const sorted = showerEntry ? [showerEntry, ...others] : others;
 
   ui.modalTitle.textContent = `${shower.name} called SHOW`;
   ui.revealBox.innerHTML = "";

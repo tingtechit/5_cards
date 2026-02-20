@@ -451,3 +451,16 @@ input {
   color: #d5f2e7;
 }
 .instructions-box li { margin: 6px 0; }
+
+.lobby-box {
+  margin-top: 8px;
+  border: 1px solid rgba(157, 223, 203, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(8, 33, 41, 0.45);
+}
+.lobby-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: #d6f3e7;
+}

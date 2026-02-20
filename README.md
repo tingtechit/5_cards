@@ -151,3 +151,11 @@ Use this flow:
 - If your round add is `+0`: you see **WON** with firecrackers.
 - If your round add is `+50`: you see **LOST**.
 - Otherwise, you see your own round add points in the popup.
+
+
+### Lobby behavior (online)
+
+- Every joined player is listed in the lobby for all users before game start.
+- Host can start after at least 2 players are in lobby.
+- When SHOW is pressed by any player, the popup is shown to all players.
+- Reveal order starts with the player who pressed SHOW, then the remaining players.
