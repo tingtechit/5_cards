@@ -21,6 +21,9 @@ const ui = {
   onlineName: document.getElementById("onlineName"),
   roomCodeInput: document.getElementById("roomCodeInput"),
   onlineStatus: document.getElementById("onlineStatus"),
+  voiceJoinBtn: document.getElementById("voiceJoinBtn"),
+  voiceMuteBtn: document.getElementById("voiceMuteBtn"),
+  voiceStatus: document.getElementById("voiceStatus"),
   lobbyPlayers: document.getElementById("lobbyPlayers"),
   lobbyBox: document.getElementById("lobbyBox"),
   setupError: document.getElementById("setupError"),
@@ -68,6 +71,13 @@ const state = {
     isHost: false,
     unsubRoom: null,
     presenceRef: null,
+    voice: {
+      enabled: false,
+      muted: false,
+      localStream: null,
+      peers: {},
+      signalRef: null,
+    },
   },
   lastShowPayload: null,
   leaveNotice: null,
@@ -96,6 +106,7 @@ function initFirebase() {
 
   firebaseDb = services.database;
   ui.onlineStatus.textContent = "Firebase connected. Create or join a room.";
+  setVoiceStatus("Voice: off");
 }
 
 function roomRef(roomId) {
@@ -112,6 +123,220 @@ function setOnlineStatus(msg) {
 
 function sanitizeRoomCode(value) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+}
+
+const RTC_CONFIG = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+};
+
+function setVoiceStatus(message) {
+  if (ui.voiceStatus) ui.voiceStatus.textContent = message;
+}
+
+function supportsVoiceChat() {
+  return typeof window.RTCPeerConnection === "function" && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+function voiceSignalInboxRef(roomId = state.online.roomId) {
+  return roomRef(roomId).child(`voiceSignals/${state.online.playerId}`);
+}
+
+function cleanupVoicePeer(remoteId) {
+  const peer = state.online.voice.peers[remoteId];
+  if (!peer) return;
+  if (peer.audioEl) peer.audioEl.remove();
+  if (peer.pc) peer.pc.close();
+  delete state.online.voice.peers[remoteId];
+}
+
+function leaveVoiceChat() {
+  if (state.online.voice.signalRef) {
+    state.online.voice.signalRef.off();
+    state.online.voice.signalRef = null;
+  }
+  Object.keys(state.online.voice.peers).forEach(cleanupVoicePeer);
+  if (state.online.voice.localStream) {
+    state.online.voice.localStream.getTracks().forEach((track) => track.stop());
+    state.online.voice.localStream = null;
+  }
+  state.online.voice.enabled = false;
+  state.online.voice.muted = false;
+  if (ui.voiceMuteBtn) {
+    ui.voiceMuteBtn.disabled = true;
+    ui.voiceMuteBtn.textContent = "Mute Mic";
+  }
+  if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = "Join Voice Chat";
+  setVoiceStatus("Voice: off");
+}
+
+function toggleVoiceMute() {
+  if (!state.online.voice.localStream) return;
+  state.online.voice.muted = !state.online.voice.muted;
+  state.online.voice.localStream.getAudioTracks().forEach((track) => {
+    track.enabled = !state.online.voice.muted;
+  });
+  if (ui.voiceMuteBtn) ui.voiceMuteBtn.textContent = state.online.voice.muted ? "Unmute Mic" : "Mute Mic";
+  setVoiceStatus(state.online.voice.muted ? "Voice: connected (muted)" : "Voice: connected");
+}
+
+function sendVoiceSignal(toId, payload) {
+  if (!state.online.roomId) return Promise.resolve();
+  return roomRef(state.online.roomId).child(`voiceSignals/${toId}/${state.online.playerId}`).set({
+    ...payload,
+    updatedAt: Date.now(),
+  });
+}
+
+async function ensureLocalVoiceStream() {
+  if (state.online.voice.localStream) return state.online.voice.localStream;
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  state.online.voice.localStream = stream;
+  return stream;
+}
+
+async function ensureVoicePeer(remoteId, createOffer = false) {
+  if (!remoteId || remoteId === state.online.playerId) return null;
+  if (state.online.voice.peers[remoteId]) return state.online.voice.peers[remoteId];
+
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+  const stream = await ensureLocalVoiceStream();
+  stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+  const audioEl = document.createElement("audio");
+  audioEl.autoplay = true;
+  audioEl.playsInline = true;
+  audioEl.dataset.peerId = remoteId;
+  audioEl.style.display = "none";
+  document.body.appendChild(audioEl);
+
+  const peer = { pc, audioEl };
+  state.online.voice.peers[remoteId] = peer;
+
+  pc.ontrack = (event) => {
+    const [remoteStream] = event.streams;
+    if (remoteStream) audioEl.srcObject = remoteStream;
+  };
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      sendVoiceSignal(remoteId, { type: "candidate", candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate });
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    const stateName = pc.connectionState;
+    if (stateName === "failed" || stateName === "closed" || stateName === "disconnected") {
+      cleanupVoicePeer(remoteId);
+    }
+  };
+
+  if (createOffer) {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await sendVoiceSignal(remoteId, { type: "offer", sdp: offer });
+  }
+
+  return peer;
+}
+
+async function handleVoiceSignal(fromId, signal) {
+  if (!signal || !signal.type || fromId === state.online.playerId) return;
+  const wantsOffer = signal.type !== "offer" && state.online.playerId < fromId;
+  const peer = await ensureVoicePeer(fromId, wantsOffer);
+  if (!peer) return;
+  const { pc } = peer;
+
+  if (signal.type === "offer" && signal.sdp) {
+    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await sendVoiceSignal(fromId, { type: "answer", sdp: answer });
+    return;
+  }
+
+  if (signal.type === "answer" && signal.sdp) {
+    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    return;
+  }
+
+  if (signal.type === "candidate" && signal.candidate) {
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    } catch (_error) {
+      // Ignore stale ICE candidates for closed peers.
+    }
+  }
+}
+
+function subscribeVoiceSignals() {
+  if (!state.online.roomId) return;
+  if (state.online.voice.signalRef) state.online.voice.signalRef.off();
+  const inboxRef = voiceSignalInboxRef();
+  state.online.voice.signalRef = inboxRef;
+  inboxRef.on("value", async (snap) => {
+    const signals = snap.val() || {};
+    for (const [fromId, signal] of Object.entries(signals)) {
+      await handleVoiceSignal(fromId, signal);
+      inboxRef.child(fromId).remove();
+    }
+  });
+}
+
+function syncVoicePeers(playersEntries) {
+  if (!state.online.voice.enabled) return;
+  const remoteIds = playersEntries.map(([id]) => id).filter((id) => id !== state.online.playerId);
+  const remoteSet = new Set(remoteIds);
+
+  Object.keys(state.online.voice.peers).forEach((id) => {
+    if (!remoteSet.has(id)) cleanupVoicePeer(id);
+  });
+
+  remoteIds.forEach((id) => {
+    if (!state.online.voice.peers[id]) {
+      const createOffer = state.online.playerId < id;
+      ensureVoicePeer(id, createOffer);
+    }
+  });
+}
+
+async function joinVoiceChat() {
+  if (!supportsVoiceChat()) {
+    setVoiceStatus("Voice unavailable in this browser.");
+    return;
+  }
+  if (!state.online.enabled || !state.online.roomId) {
+    setVoiceStatus("Join an online room first.");
+    return;
+  }
+  if (state.online.voice.enabled) {
+    leaveVoiceChat();
+    return;
+  }
+
+  try {
+    await ensureLocalVoiceStream();
+    state.online.voice.enabled = true;
+    state.online.voice.muted = false;
+    if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = "Leave Voice Chat";
+    if (ui.voiceMuteBtn) {
+      ui.voiceMuteBtn.disabled = false;
+      ui.voiceMuteBtn.textContent = "Mute Mic";
+    }
+    setVoiceStatus("Voice: connecting...");
+    await roomRef(state.online.roomId).child(`voicePresence/${state.online.playerId}`).set({
+      name: ui.onlineName.value.trim() || "Player",
+      joinedAt: Date.now(),
+    });
+    const presenceRef = roomRef(state.online.roomId).child(`voicePresence/${state.online.playerId}`);
+    if (typeof presenceRef.onDisconnectRemove === "function") presenceRef.onDisconnectRemove();
+    subscribeVoiceSignals();
+    const snap = await roomRef(state.online.roomId).child("players").get();
+    syncVoicePeers(Object.entries(snap.val() || {}));
+    setVoiceStatus("Voice: connected");
+  } catch (_error) {
+    leaveVoiceChat();
+    setVoiceStatus("Voice permission denied or unavailable.");
+  }
 }
 
 
@@ -514,6 +739,7 @@ function subscribeRoom(roomId) {
 
     const players = Object.entries(room.players || {});
     renderLobbyPlayers(players);
+    syncVoicePeers(players);
     if (room.status === "lobby") setOnlineStatus(`Lobby: ${players.length} player(s) in room ${roomId}`);
     ui.startOnlineBtn.disabled = !(state.online.isHost && players.length >= 2 && room.status === "lobby");
 
@@ -1070,7 +1296,18 @@ ui.nextRoundBtn.addEventListener("click", nextRound);
 ui.createRoomBtn.addEventListener("click", createRoom);
 ui.joinRoomBtn.addEventListener("click", joinRoom);
 ui.startOnlineBtn.addEventListener("click", startOnlineGame);
+ui.voiceJoinBtn?.addEventListener("click", joinVoiceChat);
+ui.voiceMuteBtn?.addEventListener("click", toggleVoiceMute);
+
+window.addEventListener("beforeunload", () => {
+  leaveVoiceChat();
+});
 
 initSetupTabs();
 initLeaveWarning();
 initFirebase();
+if (!supportsVoiceChat()) {
+  if (ui.voiceJoinBtn) ui.voiceJoinBtn.disabled = true;
+  if (ui.voiceMuteBtn) ui.voiceMuteBtn.disabled = true;
+  setVoiceStatus("Voice unavailable in this browser.");
+}

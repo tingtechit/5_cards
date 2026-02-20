@@ -161,3 +161,18 @@ Use this flow:
 - Reveal order starts with the player who pressed SHOW, then the remaining players.
 
 - If a player disconnects/leaves the room, they are removed and the game continues for remaining players with a leave message in game log.
+
+
+## Voice chat (online rooms)
+
+Voice chat is now available as an optional feature in online rooms:
+
+1. Create or join an online room.
+2. Click **Join Voice Chat**.
+3. Allow microphone permission when prompted.
+4. Use **Mute Mic** / **Unmute Mic** as needed.
+
+Notes:
+- Voice uses WebRTC audio with Firebase Realtime Database signaling.
+- For microphone access on phones/browsers, run the app over **HTTPS** (or `localhost` during local testing).
+- If voice fails to connect for some users, check firewall/NAT restrictions and try a different network.
