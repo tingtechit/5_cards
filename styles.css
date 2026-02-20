@@ -506,3 +506,8 @@ input {
 
 .game-instructions { margin: 8px 0 14px; }
 
+
+.game-voice-controls {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}

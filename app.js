@@ -24,6 +24,9 @@ const ui = {
   voiceJoinBtn: document.getElementById("voiceJoinBtn"),
   voiceMuteBtn: document.getElementById("voiceMuteBtn"),
   voiceStatus: document.getElementById("voiceStatus"),
+  gameVoiceJoinBtn: document.getElementById("gameVoiceJoinBtn"),
+  gameVoiceMuteBtn: document.getElementById("gameVoiceMuteBtn"),
+  gameVoiceStatus: document.getElementById("gameVoiceStatus"),
   lobbyPlayers: document.getElementById("lobbyPlayers"),
   lobbyBox: document.getElementById("lobbyBox"),
   setupError: document.getElementById("setupError"),
@@ -131,6 +134,23 @@ const RTC_CONFIG = {
 
 function setVoiceStatus(message) {
   if (ui.voiceStatus) ui.voiceStatus.textContent = message;
+  if (ui.gameVoiceStatus) ui.gameVoiceStatus.textContent = message;
+}
+
+function setVoiceJoinLabel(label) {
+  if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = label;
+  if (ui.gameVoiceJoinBtn) ui.gameVoiceJoinBtn.textContent = label;
+}
+
+function setVoiceMuteState({ disabled, label }) {
+  if (ui.voiceMuteBtn) {
+    ui.voiceMuteBtn.disabled = disabled;
+    ui.voiceMuteBtn.textContent = label;
+  }
+  if (ui.gameVoiceMuteBtn) {
+    ui.gameVoiceMuteBtn.disabled = disabled;
+    ui.gameVoiceMuteBtn.textContent = label;
+  }
 }
 
 function supportsVoiceChat() {
@@ -161,11 +181,8 @@ function leaveVoiceChat() {
   }
   state.online.voice.enabled = false;
   state.online.voice.muted = false;
-  if (ui.voiceMuteBtn) {
-    ui.voiceMuteBtn.disabled = true;
-    ui.voiceMuteBtn.textContent = "Mute Mic";
-  }
-  if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = "Join Voice Chat";
+  setVoiceMuteState({ disabled: true, label: "Mute Mic" });
+  setVoiceJoinLabel("Join Voice Chat");
   setVoiceStatus("Voice: off");
 }
 
@@ -175,7 +192,7 @@ function toggleVoiceMute() {
   state.online.voice.localStream.getAudioTracks().forEach((track) => {
     track.enabled = !state.online.voice.muted;
   });
-  if (ui.voiceMuteBtn) ui.voiceMuteBtn.textContent = state.online.voice.muted ? "Unmute Mic" : "Mute Mic";
+  setVoiceMuteState({ disabled: false, label: state.online.voice.muted ? "Unmute Mic" : "Mute Mic" });
   setVoiceStatus(state.online.voice.muted ? "Voice: connected (muted)" : "Voice: connected");
 }
 
@@ -317,11 +334,8 @@ async function joinVoiceChat() {
     await ensureLocalVoiceStream();
     state.online.voice.enabled = true;
     state.online.voice.muted = false;
-    if (ui.voiceJoinBtn) ui.voiceJoinBtn.textContent = "Leave Voice Chat";
-    if (ui.voiceMuteBtn) {
-      ui.voiceMuteBtn.disabled = false;
-      ui.voiceMuteBtn.textContent = "Mute Mic";
-    }
+    setVoiceJoinLabel("Leave Voice Chat");
+    setVoiceMuteState({ disabled: false, label: "Mute Mic" });
     setVoiceStatus("Voice: connecting...");
     await roomRef(state.online.roomId).child(`voicePresence/${state.online.playerId}`).set({
       name: ui.onlineName.value.trim() || "Player",
@@ -1298,6 +1312,8 @@ ui.joinRoomBtn.addEventListener("click", joinRoom);
 ui.startOnlineBtn.addEventListener("click", startOnlineGame);
 ui.voiceJoinBtn?.addEventListener("click", joinVoiceChat);
 ui.voiceMuteBtn?.addEventListener("click", toggleVoiceMute);
+ui.gameVoiceJoinBtn?.addEventListener("click", joinVoiceChat);
+ui.gameVoiceMuteBtn?.addEventListener("click", toggleVoiceMute);
 
 window.addEventListener("beforeunload", () => {
   leaveVoiceChat();
@@ -1309,5 +1325,7 @@ initFirebase();
 if (!supportsVoiceChat()) {
   if (ui.voiceJoinBtn) ui.voiceJoinBtn.disabled = true;
   if (ui.voiceMuteBtn) ui.voiceMuteBtn.disabled = true;
+  if (ui.gameVoiceJoinBtn) ui.gameVoiceJoinBtn.disabled = true;
+  if (ui.gameVoiceMuteBtn) ui.gameVoiceMuteBtn.disabled = true;
   setVoiceStatus("Voice unavailable in this browser.");
 }
