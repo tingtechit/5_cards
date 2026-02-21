@@ -189,7 +189,8 @@ function toggleVoiceMute() {
 
 function sendVoiceSignal(toId, payload) {
   if (!state.online.roomId) return Promise.resolve();
-  return roomRef(state.online.roomId).child(`voiceSignals/${toId}/${state.online.playerId}`).set({
+  const msgId = `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  return roomRef(state.online.roomId).child(`voiceSignals/${toId}/${state.online.playerId}/${msgId}`).set({
     ...payload,
     updatedAt: Date.now(),
   });
@@ -282,10 +283,20 @@ function subscribeVoiceSignals() {
   const inboxRef = voiceSignalInboxRef();
   state.online.voice.signalRef = inboxRef;
   inboxRef.on("value", async (snap) => {
-    const signals = snap.val() || {};
-    for (const [fromId, signal] of Object.entries(signals)) {
-      await handleVoiceSignal(fromId, signal);
-      inboxRef.child(fromId).remove();
+    const groupedSignals = snap.val() || {};
+    for (const [fromId, messages] of Object.entries(groupedSignals)) {
+      if (messages && typeof messages === "object" && messages.type) {
+        await handleVoiceSignal(fromId, messages);
+        inboxRef.child(fromId).remove();
+        continue;
+      }
+
+      const entries = messages && typeof messages === "object" ? Object.entries(messages) : [];
+      entries.sort((a, b) => (a[1]?.updatedAt || 0) - (b[1]?.updatedAt || 0));
+      for (const [msgId, signal] of entries) {
+        await handleVoiceSignal(fromId, signal);
+        inboxRef.child(fromId).child(msgId).remove();
+      }
     }
   });
 }
@@ -1157,12 +1168,23 @@ function showFinalWinnerModal() {
 }
 
 function nextRound() {
+  if (ui.nextRoundBtn.disabled) return;
+  ui.nextRoundBtn.disabled = true;
+
   if (state.gameOver) {
     ui.resultPanel.classList.remove("result-win", "result-lose");
     ui.resultPanel.classList.add("hidden");
     render();
     return;
   }
+
+  if (state.online.enabled && !state.online.isHost) {
+    ui.resultPanel.classList.remove("result-win", "result-lose");
+    ui.resultPanel.classList.add("hidden");
+    render();
+    return;
+  }
+
   ui.resultPanel.classList.remove("result-win", "result-lose");
   ui.resultPanel.classList.add("hidden");
   if (state.roundNumber >= state.roundsTarget) {
