@@ -1272,10 +1272,12 @@ function render() {
     chip.className = `player-chip ${i === state.currentPlayerIndex ? "current" : ""} ${isPrev ? "prev-highlight" : ""}`;
     const last = p.lastDiscard.length ? p.lastDiscard.map(renderCardText).join(" ") : "none";
     const miniBacks = Array.from({ length: Math.min(p.hand.length, 8) }).map(() => '<span class="mini-back"></span>').join("");
+    const turnBadge = i === state.currentPlayerIndex ? `<span class="turn-badge">ACTIVE TURN</span>` : "";
     chip.innerHTML = `
       <div class="player-head">
         <span class="player-avatar">${p.kind === "bot" ? "🤖" : p.avatar}</span>
         <strong>${p.name}${p.kind === "bot" ? " [BOT]" : ""}</strong>
+        ${turnBadge}
       </div>
       <p>Total score: ${p.totalScore}</p>
       <p>Cards in hand: ${p.hand.length}</p>
