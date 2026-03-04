@@ -1,11 +1,11 @@
 :root {
-  --bg-1: #072028;
-  --bg-2: #0f3e4d;
-  --surface: rgba(7, 25, 31, 0.82);
-  --surface-strong: rgba(7, 25, 31, 0.96);
-  --line: rgba(140, 204, 184, 0.35);
-  --text: #f5fff9;
-  --muted: #a5c4b9;
+  --bg-1: #3f1f8f;
+  --bg-2: #ff5fa2;
+  --surface: rgba(44, 14, 84, 0.78);
+  --surface-strong: rgba(52, 18, 96, 0.92);
+  --line: rgba(255, 231, 150, 0.5);
+  --text: #fff7ff;
+  --muted: #ffdff1;
 }
 
 * { box-sizing: border-box; }
@@ -15,9 +15,10 @@ body {
   font-family: "Space Grotesk", "Avenir Next", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 15% 20%, rgba(89, 205, 177, 0.23), transparent 40%),
-    radial-gradient(circle at 85% 5%, rgba(244, 200, 106, 0.17), transparent 35%),
-    linear-gradient(165deg, var(--bg-1), var(--bg-2));
+    radial-gradient(circle at 14% 18%, rgba(107, 255, 226, 0.35), transparent 42%),
+    radial-gradient(circle at 85% 8%, rgba(255, 238, 122, 0.28), transparent 38%),
+    radial-gradient(circle at 52% 92%, rgba(140, 198, 255, 0.2), transparent 40%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -30,8 +31,8 @@ body {
   pointer-events: none;
   animation: drift 14s ease-in-out infinite alternate;
 }
-.ambient-1 { width: 270px; height: 270px; background: rgba(65, 170, 147, 0.35); top: -60px; left: -30px; }
-.ambient-2 { width: 320px; height: 320px; background: rgba(229, 165, 73, 0.27); right: -80px; bottom: -90px; }
+.ambient-1 { width: 270px; height: 270px; background: rgba(96, 247, 212, 0.42); top: -60px; left: -30px; }
+.ambient-2 { width: 320px; height: 320px; background: rgba(255, 214, 118, 0.32); right: -80px; bottom: -90px; }
 
 .app-shell { position: relative; z-index: 1; max-width: 1280px; margin: 18px auto 34px; padding: 12px; }
 .panel {
@@ -70,9 +71,9 @@ input {
 }
 .btn:hover:not(:disabled) { transform: translateY(-2px); background: rgba(33, 88, 94, 0.95); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: linear-gradient(120deg, #4ecca7, #2e9f88); color: #05211c; border-color: transparent; }
-.btn-accent { background: linear-gradient(120deg, #ffd58a, #f0bc59); color: #2a1f08; border-color: transparent; }
-.btn-danger { background: linear-gradient(120deg, #ff9b91, #e95d58); color: #2e0908; border-color: transparent; }
+.btn-primary { background: linear-gradient(120deg, #6df7d7, #57b6ff); color: #1f1240; border-color: transparent; }
+.btn-accent { background: linear-gradient(120deg, #ffe67a, #ff9de1); color: #421636; border-color: transparent; }
+.btn-danger { background: linear-gradient(120deg, #ff8cb8, #ff6f6f); color: #3b0d24; border-color: transparent; }
 .error { min-height: 20px; color: #ff9f93; margin-top: 8px; }
 .hidden { display: none !important; }
 
@@ -502,16 +503,3 @@ input {
 .game-instructions { margin: 8px 0 14px; }
 
 
-.game-voice-controls {
-  margin: 12px 0 14px;
-  padding: 10px 12px;
-  border: 1px solid rgba(157, 223, 203, 0.28);
-  border-radius: 10px;
-  background: rgba(8, 33, 41, 0.35);
-}
-.game-voice-controls .btn {
-  min-width: 150px;
-}
-.game-voice-controls .tiny {
-  margin: 0;
-}
