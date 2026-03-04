@@ -628,7 +628,7 @@ input {
   align-items: end;
 }
 .online-meta .name-block { margin: 0; }
-#roomCodeInput { margin-top: 10px; }
+.online-name-line { margin: 0 0 10px; }
 .online-actions {
   margin-top: 10px;
   display: grid;
