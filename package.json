@@ -1,0 +1,26 @@
+{
+  "name": "5_cards",
+  "version": "1.0.0",
+  "description": "5 Cards browser game with local mode and Firebase-powered online real-time multiplayer rooms.",
+  "main": "app.js",
+  "scripts": {
+    "serve": "python -m http.server 5173",
+    "check": "node --check app.js && node --check firebase-init.js && node --check firebase-config.js",
+    "deploy": "firebase deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tingtechit/5_cards.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/tingtechit/5_cards/issues"
+  },
+  "homepage": "https://github.com/tingtechit/5_cards#readme",
+  "dependencies": {
+    "firebase": "^12.1.0"
+  }
+}
