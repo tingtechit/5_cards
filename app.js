@@ -451,6 +451,22 @@ function normalizePlayer(player) {
   };
 }
 
+function normalizePlayers(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((p, idx) => normalizePlayer({ ...p, id: p?.id ?? String(idx) }))
+      .filter(Boolean);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, p]) => normalizePlayer({ ...(p || {}), id: (p && p.id) || key }))
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function maybePlaySyncedShow() {
   const payload = state.lastShowPayload;
   if (!payload || !payload.eventId || payload.eventId === lastSeenShowEventId) return;
@@ -464,8 +480,13 @@ function myPlayerIndex() {
 }
 
 function canCurrentHumanAct() {
-  if (state.online.enabled) return !state.gameOver && currentPlayer().id === state.online.playerId;
-  return !state.gameOver && currentPlayer().kind === "human";
+  const cp = currentPlayer();
+  if (!cp || state.gameOver) return false;
+  if (state.online.enabled) {
+    if (cp.id) return cp.id === state.online.playerId;
+    return state.currentPlayerIndex === state.viewerIndex;
+  }
+  return cp.kind === "human";
 }
 
 function serializeGameState() {
@@ -485,7 +506,7 @@ function serializeGameState() {
 }
 
 function applyRemoteGameState(gameState) {
-  state.players = normalizeList(gameState.players).map(normalizePlayer).filter(Boolean);
+  state.players = normalizePlayers(gameState.players);
   state.viewerIndex = Number.isInteger(gameState.viewerIndex) ? gameState.viewerIndex : 0;
   state.roundsTarget = Number.isInteger(gameState.roundsTarget) ? gameState.roundsTarget : 1;
   state.roundNumber = Number.isInteger(gameState.roundNumber) ? gameState.roundNumber : 1;
