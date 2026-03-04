@@ -15,8 +15,8 @@
 
   <main class="app-shell">
     <section id="setupPanel" class="panel panel-setup">
-      <h1>5 Cards</h1>
-      <p class="sub">Discard first, then draw. Keep your total lowest and call <strong>Show</strong> at the right time.</p>
+      <h1 class="hero-title">Multiplayer Mode</h1>
+      <p class="sub hero-sub">Play with your friends • Custom 5 Cards rules • Realtime rounds</p>
 
       <div class="mode-tabs">
         <button id="onlineTabBtn" type="button" class="btn tab-btn active">Online</button>
@@ -49,20 +49,20 @@
 
       <section id="onlineModeSection" class="mode-section">
         <p class="tiny">Create a room, share room code, and play in real-time.</p>
-        <label class="name-block">
-          Your display name
-          <input id="onlineName" type="text" placeholder="Your name" />
-        </label>
-        <div class="form-grid">
-          <label>
-            Online Rounds (1-20)
+        <div class="online-meta">
+          <label class="name-block">
+            Your display name
+            <input id="onlineName" type="text" placeholder="Your name" />
+          </label>
+          <label class="name-block">
+            Rounds (1-20)
             <input id="onlineRoundCount" type="number" min="1" max="20" value="5" />
           </label>
         </div>
-        <div class="form-grid online-grid">
-          <button id="createRoomBtn" class="btn">Create Room</button>
-          <input id="roomCodeInput" type="text" placeholder="ROOM123" />
-          <button id="joinRoomBtn" class="btn">Join Room</button>
+        <input id="roomCodeInput" type="text" placeholder="ROOM123" />
+        <div class="online-actions">
+          <button id="createRoomBtn" class="btn btn-create">Create Room</button>
+          <button id="joinRoomBtn" class="btn btn-join">Join Room</button>
         </div>
         <p id="onlineStatus" class="tiny"></p>
         <div id="lobbyBox" class="lobby-box">
@@ -70,6 +70,16 @@
           <ul id="lobbyPlayers" class="lobby-list"></ul>
         </div>
         <button id="startOnlineBtn" class="btn btn-accent" disabled>Start Online Match</button>
+
+        <div class="online-steps">
+          <h3>Steps:</h3>
+          <ol>
+            <li>Have a stable internet connection.</li>
+            <li>Enter your display name.</li>
+            <li>Create room or join with room code.</li>
+            <li>Host starts match when lobby is ready.</li>
+          </ol>
+        </div>
       </section>
 
       <details class="instructions-box" open>
@@ -93,7 +103,7 @@
           <h2 id="roundLabel">1 / 1</h2>
         </div>
         <div>
-          <p class="tiny">Current Turn</p>
+          <p class="tiny">Turn</p>
           <h2 id="turnLabel">Player</h2>
         </div>
         <div>

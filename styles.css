@@ -503,3 +503,161 @@ input {
 .game-instructions { margin: 8px 0 14px; }
 
 
+
+/* --- Inspired arcade/mobile refresh --- */
+.hero-title {
+  font-size: clamp(2rem, 5.6vw, 3rem);
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-shadow: 0 3px 0 rgba(7, 21, 68, 0.45);
+}
+.hero-sub {
+  text-align: center;
+  font-weight: 700;
+  color: #e6f3ff;
+}
+
+.panel-setup {
+  background: linear-gradient(180deg, rgba(14, 62, 166, 0.9), rgba(7, 85, 170, 0.88));
+  border: 2px solid rgba(199, 236, 255, 0.6);
+  box-shadow: 0 20px 50px rgba(6, 22, 72, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.panel-game {
+  background:
+    linear-gradient(180deg, rgba(14, 64, 168, 0.92), rgba(6, 57, 149, 0.92)),
+    radial-gradient(circle at 50% 0%, rgba(143, 206, 255, 0.28), transparent 42%);
+  border: 2px solid rgba(186, 228, 255, 0.52);
+}
+
+input {
+  background: #f6fbff;
+  color: #0f234d;
+  border: 2px solid rgba(36, 93, 189, 0.46);
+  font-weight: 700;
+}
+
+.btn {
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 0 rgba(8, 28, 75, 0.38), 0 10px 20px rgba(7, 17, 56, 0.32);
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 rgba(8, 28, 75, 0.35), 0 7px 12px rgba(7, 17, 56, 0.3);
+}
+.btn-primary { background: linear-gradient(180deg, #6fff4f, #41c42f); color: #0d3a12; }
+.btn-accent { background: linear-gradient(180deg, #41b5ff, #1676cf); color: #eef7ff; }
+.btn-danger { background: linear-gradient(180deg, #ffdf57, #f3b022); color: #53350b; }
+
+.mode-tabs {
+  justify-content: center;
+}
+.tab-btn {
+  min-width: 150px;
+  font-size: 1rem;
+  background: linear-gradient(180deg, #3d77e3, #2854b2);
+}
+.tab-btn.active {
+  border-color: rgba(255, 253, 184, 0.95);
+  background: linear-gradient(180deg, #67e241, #37ae26);
+  color: #103d18;
+}
+
+.topbar > div,
+.stack-card,
+.hand-panel,
+.score-panel,
+.log-panel,
+.instructions-box,
+.lobby-box {
+  background: rgba(4, 48, 128, 0.7);
+  border: 2px solid rgba(170, 220, 255, 0.42);
+}
+
+#modalTitle {
+  font-size: clamp(1.6rem, 4.4vw, 2.2rem);
+  text-align: center;
+  color: #ffffff;
+  text-shadow: 0 3px 0 rgba(6, 26, 84, 0.45);
+  background: linear-gradient(180deg, #66ea3f, #3cbf29);
+  border-radius: 14px;
+  padding: 10px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.36);
+}
+
+.online-steps {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(174, 223, 255, 0.45);
+  background: rgba(6, 60, 151, 0.55);
+}
+.online-steps h3 {
+  margin: 0 0 6px;
+}
+.online-steps ol {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .panel-setup,
+  .panel-game {
+    border-radius: 16px;
+  }
+  .btn {
+    width: 100%;
+  }
+}
+
+
+/* online setup alignment updates */
+.online-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.online-meta .name-block { margin: 0; }
+#roomCodeInput { margin-top: 10px; }
+.online-actions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.btn-create { background: linear-gradient(180deg, #6fff4f, #41c42f); color: #0d3a12; }
+.btn-join { background: linear-gradient(180deg, #41b5ff, #1676cf); color: #eef7ff; }
+
+/* equalize stack cards and action button baselines */
+.table-zone .stack-card {
+  display: flex;
+  flex-direction: column;
+}
+.table-zone .stack-card .btn {
+  margin-top: auto;
+}
+
+/* make previous-player cards larger */
+.discard-mini {
+  padding: 5px 8px;
+  font-size: 15px;
+}
+
+@media (max-width: 760px) {
+  .online-meta { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .online-actions { grid-template-columns: 1fr 1fr; }
+  .online-actions .btn { width: 100%; }
+  .table-zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .table-zone .stack-card .btn { min-height: 44px; }
+  .discard-mini { padding: 6px 9px; font-size: 16px; }
+}
